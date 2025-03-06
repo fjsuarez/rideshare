@@ -1,7 +1,15 @@
 import { createTheme } from '@mui/material/styles';
-import { grey, red } from '@mui/material/colors';
+import { grey, red, lightBlue } from '@mui/material/colors';
 
-// A custom theme for this app
+declare module '@mui/material/styles' {
+    interface Palette {
+      accent: Palette['primary'];
+    }
+    interface PaletteOptions {
+      accent?: PaletteOptions['primary'];
+    }
+  }
+
 const theme = createTheme({
   cssVariables: true,
   palette: {
@@ -14,6 +22,12 @@ const theme = createTheme({
     error: {
       main: red.A400,
     },
+    accent: {
+        main: lightBlue[500],
+        light: '#4DC3FF',
+        dark: '#0088C3',
+        contrastText: '#ffffff',
+      },
   },
 });
 

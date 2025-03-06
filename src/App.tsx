@@ -54,7 +54,7 @@ function App() {
           />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Ride
-            <Box component="span" sx={{ color: "#22A9E1" }}>
+            <Box component="span" sx={{ color: theme.palette.accent.main }}>
               Share
             </Box>
           </Typography>
