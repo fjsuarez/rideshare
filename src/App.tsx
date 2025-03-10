@@ -1,29 +1,47 @@
-import { useState } from "react";
 import Paper from "@mui/material/Paper";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import Header from "./components/Header";
 import MainContent from "./components/MainContent";
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+function AppContent() {
+  const { userProfile, logoutUser } = useAuth();
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
+  
+  const isLoggedIn = !!userProfile;
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
     <Paper sx={{ height: "100vh" }} elevation={3}>
-      <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} onLogin={handleLogin} />
-      <MainContent isLoggedIn={isLoggedIn} isSmallScreen={isSmallScreen} onLogin={handleLogin} />
+      <Header 
+        isLoggedIn={isLoggedIn} 
+        onLogout={handleLogout} 
+        onLogin={() => {}}
+      />
+      <MainContent 
+        isLoggedIn={isLoggedIn} 
+        isSmallScreen={isSmallScreen} 
+        onLogin={() => {}}
+      />
     </Paper>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

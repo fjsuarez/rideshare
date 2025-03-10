@@ -6,10 +6,10 @@ import AuthenticatedContent from "./AuthenticatedContent";
 interface MainContentProps {
   isLoggedIn: boolean;
   isSmallScreen: boolean;
-  onLogin: () => void;
+  onLogin: () => void; // Keep for backwards compatibility
 }
 
-function MainContent({ isLoggedIn, isSmallScreen, onLogin }: MainContentProps) {
+function MainContent({ isLoggedIn, isSmallScreen }: MainContentProps) {
   const containerStyles = {
     height: { xs: "calc(50% - 64px)", md: "calc(100% - 64px)" },
     padding: { xs: 0, md: 2 },
@@ -22,16 +22,16 @@ function MainContent({ isLoggedIn, isSmallScreen, onLogin }: MainContentProps) {
       {isLoggedIn ? (
         <AuthenticatedContent isSmallScreen={isSmallScreen} />
       ) : (
-        <LoginView onLogin={onLogin} />
+        <LoginView />
       )}
     </Grid>
   );
 }
 
-function LoginView({ onLogin }: { onLogin: () => void }) {
+function LoginView() {
   return (
     <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-      <LoginPanel onLogin={onLogin} />
+      <LoginPanel onLogin={() => {}} /> {/* Prop kept for backwards compatibility */}
     </Grid>
   );
 }

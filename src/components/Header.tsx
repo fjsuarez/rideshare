@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Box from "@mui/material/Box";
 import { useTheme } from "@mui/material/styles";
+import { useAuth } from "../context/AuthContext";
 
 interface HeaderProps {
   isLoggedIn: boolean;
@@ -16,9 +16,10 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-function Header({ isLoggedIn, onLogin, onLogout }: HeaderProps) {
+function Header({ isLoggedIn, onLogout }: HeaderProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const theme = useTheme();
+  const { userProfile } = useAuth();
 
   const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -32,6 +33,11 @@ function Header({ isLoggedIn, onLogin, onLogout }: HeaderProps) {
     onLogout();
     handleMenuClose();
   };
+
+  // Get user's display name
+  const displayName = userProfile ? 
+    `${userProfile.firstName} ${userProfile.lastName}` : 
+    "User";
 
   return (
     <AppBar position="static">
@@ -51,21 +57,25 @@ function Header({ isLoggedIn, onLogin, onLogout }: HeaderProps) {
         {isLoggedIn ? (
           <>
             <IconButton color="inherit" onClick={handleAvatarClick}>
-              <Avatar alt="User Avatar" src="/avatar.png" />
+              <Avatar alt={displayName}>
+                {userProfile?.firstName?.[0] || "U"}
+              </Avatar>
             </IconButton>
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
+              <MenuItem sx={{ pointerEvents: 'none' }}>
+                {displayName}
+              </MenuItem>
+              <MenuItem sx={{ pointerEvents: 'none', fontSize: '0.8rem', color: 'gray' }}>
+                {userProfile?.email}
+              </MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
           </>
-        ) : (
-          <Button color="inherit" onClick={onLogin}>
-            Login
-          </Button>
-        )}
+        ) : null}
       </Toolbar>
     </AppBar>
   );

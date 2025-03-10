@@ -8,43 +8,63 @@ import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginPanelProps {
-  onLogin: () => void;
+  onLogin: () => void; // Keep for backwards compatibility
 }
 
-const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
+const LoginPanel: React.FC<LoginPanelProps> = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(''); // Added phoneNumber
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
+  
+  const { loginUser, registerUser } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, validate credentials here
-    if (isLoginMode) {
-      // Handle login
-      onLogin();
-    } else {
-      // Handle signup
-      // Validate passwords match
-      if (password === confirmPassword) {
-        console.log('Sign up with:', { name, email, password });
-        // In a real app, you would send this data to your backend
-        // Then login the user after successful registration
-        onLogin();
+    setError(null);
+    setLoading(true);
+    
+    try {
+      if (isLoginMode) {
+        // Handle login with Firebase
+        await loginUser(email, password);
+      } else {
+        // Handle signup with Firebase
+        // Validate passwords match
+        if (password !== confirmPassword) {
+          setError("Passwords don't match");
+          setLoading(false);
+          return;
+        }
+        
+        await registerUser(email, password, name, phoneNumber);
       }
+    } catch (error: any) {
+      // Firebase auth errors have a code and message
+      setError(error.message || 'Authentication failed');
+      console.error('Auth error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setIsLoginMode(newValue === 0);
+    setError(null);
   };
 
   return (
-    <Card sx={{ marginTop: { xs: 2, md: 0 }, maxWidth: 450, width: '100%' }}>
+    <Card sx={{ marginTop: { xs: 2, md: 0 }, maxWidth: 450, width: '100%', margin: '0 auto' }}>
       <CardContent sx={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -60,14 +80,32 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
           value={isLoginMode ? 0 : 1}
           onChange={handleTabChange}
           variant="fullWidth"
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: 3,
+            // Add these styles for better tab visualization
+            '& .MuiTabs-indicator': {
+              backgroundColor: theme.palette.accent.main,
+              height: 3
+            },
+            '& .Mui-selected': {
+              color: `${theme.palette.accent.main} !important`,
+              fontWeight: 'bold'
+            }
+          }}
         >
           <Tab label="Sign In" />
           <Tab label="Sign Up" />
         </Tabs>
         
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
           {!isLoginMode && (
+            <>
             <TextField
               margin="normal"
               required
@@ -78,7 +116,20 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
               autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              disabled={loading}
             />
+            <TextField
+            margin="normal"
+            fullWidth
+            id="phoneNumber"
+            label="Phone Number"
+            name="phoneNumber"
+            autoComplete="tel"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            disabled={loading}
+          />
+          </>
           )}
           <TextField
             margin="normal"
@@ -90,6 +141,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
           />
           <TextField
             margin="normal"
@@ -102,6 +154,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
             autoComplete={isLoginMode ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
           />
           {!isLoginMode && (
             <TextField
@@ -121,12 +174,14 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
                   ? "Passwords don't match" 
                   : ""
               }
+              disabled={loading}
             />
           )}
           <Button
             type="submit"
             fullWidth
             variant="contained"
+            disabled={loading}
             sx={{ 
               mt: 3, mb: 2,
               bgcolor: theme.palette.accent.main,
@@ -135,7 +190,11 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
               }
             }}
           >
-            {isLoginMode ? "Sign In" : "Create Account"}
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              isLoginMode ? "Sign In" : "Create Account"
+            )}
           </Button>
         </Box>
       </CardContent>
