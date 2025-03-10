@@ -39,7 +39,7 @@ const LoginPanel: React.FC<LoginPanelProps> = ({ onLogin }) => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setIsLoginMode(newValue === 0);
   };
 
