@@ -8,11 +8,10 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Box from "@mui/material/Box";
 import { useTheme } from "@mui/material/styles";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/auth";
 
 interface HeaderProps {
   isLoggedIn: boolean;
-  onLogin: () => void;
   onLogout: () => void;
 }
 
@@ -49,7 +48,7 @@ function Header({ isLoggedIn, onLogout }: HeaderProps) {
         />
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Ride
-          <Box component="span" sx={{ color: theme.palette.accent.main }}>
+          <Box component="span" sx={{ color: theme.palette.accent.contrastText }}>
             Share
           </Box>
         </Typography>

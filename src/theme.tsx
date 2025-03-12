@@ -1,5 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { grey, red, lightBlue } from '@mui/material/colors';
+import { light } from '@mui/material/styles/createPalette';
 
 declare module '@mui/material/styles' {
     interface Palette {
@@ -14,7 +15,8 @@ const theme = createTheme({
   cssVariables: true,
   palette: {
     primary: {
-      main: grey[50],
+      main: lightBlue[500],
+
     },
     secondary: {
       main: grey[900],
@@ -24,9 +26,9 @@ const theme = createTheme({
     },
     accent: {
         main: lightBlue[500],
-        light: '#4DC3FF',
-        dark: '#0088C3',
-        contrastText: '#ffffff',
+        light: lightBlue[100],
+        dark: lightBlue[900],
+        contrastText: grey[50],
       },
   },
 });

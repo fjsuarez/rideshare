@@ -1,6 +1,6 @@
 import Grid from "@mui/material/Grid2";
 
-import ProfilePanel from "./ProfilePanel";
+import ProfilePanel from "./ProfilePanel/ProfilePanel";
 import ListPanel from "./ListPanel";
 import MapPanel from "./MapPanel";
 import ListDrawer from "./ListDrawer";

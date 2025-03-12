@@ -1,7 +1,7 @@
 import Paper from "@mui/material/Paper";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/auth";
 
 import Header from "./components/Header";
 import MainContent from "./components/MainContent";
@@ -26,12 +26,10 @@ function AppContent() {
       <Header 
         isLoggedIn={isLoggedIn} 
         onLogout={handleLogout} 
-        onLogin={() => {}}
       />
       <MainContent 
         isLoggedIn={isLoggedIn} 
         isSmallScreen={isSmallScreen} 
-        onLogin={() => {}}
       />
     </Paper>
   );

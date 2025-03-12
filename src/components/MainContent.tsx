@@ -1,12 +1,11 @@
 import Grid from "@mui/material/Grid2";
 
-import LoginPanel from "./LoginPanel";
+import LoginPanel from "./LoginPanel/LoginPanel";
 import AuthenticatedContent from "./AuthenticatedContent";
 
 interface MainContentProps {
   isLoggedIn: boolean;
   isSmallScreen: boolean;
-  onLogin: () => void; // Keep for backwards compatibility
 }
 
 function MainContent({ isLoggedIn, isSmallScreen }: MainContentProps) {
@@ -31,7 +30,7 @@ function MainContent({ isLoggedIn, isSmallScreen }: MainContentProps) {
 function LoginView() {
   return (
     <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-      <LoginPanel onLogin={() => {}} /> {/* Prop kept for backwards compatibility */}
+      <LoginPanel/>
     </Grid>
   );
 }
