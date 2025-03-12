@@ -2,7 +2,7 @@ import React from "react";
 import { grey } from "@mui/material/colors";
 import Box from "@mui/material/Box";
 import SwipeableDrawer from "@mui/material/SwipeableDrawer";
-import ListPanel from "./ListPanel";
+import RidePanel from "./RidePanel";
 
 export default function ListDrawer() {
   const [open, setOpen] = React.useState(false);
@@ -69,7 +69,7 @@ export default function ListDrawer() {
               left: "calc(50% - 15px)",
             }}
           />
-          <ListPanel />
+          <RidePanel />
         </Box>
       </SwipeableDrawer>
     </Box>

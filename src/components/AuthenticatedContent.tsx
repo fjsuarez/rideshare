@@ -1,7 +1,7 @@
 import Grid from "@mui/material/Grid2";
 
 import ProfilePanel from "./ProfilePanel/ProfilePanel";
-import ListPanel from "./ListPanel";
+import RidePanel from "./RidePanel";
 import MapPanel from "./MapPanel";
 import ListDrawer from "./ListDrawer";
 
@@ -37,7 +37,7 @@ function ListSection() {
       size={{ xs: 12, md: 6, lg: 4 }}
       sx={{ display: { xs: "none", md: "block" } }}
     >
-      <ListPanel />
+      <RidePanel />
     </Grid>
   );
 }
