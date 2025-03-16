@@ -9,21 +9,27 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   onboardingCompleted: boolean;
-  userType: 'rider' | 'driver';
+  userType: "rider" | "driver";
   driver?: DriverDetails;
 }
-  
-  export interface DriverDetails {
-    licenseNumber: string;
-    isActive: boolean;
-    vehicles: Vehicle[];
-  }
-  
-  export interface Vehicle {
-    vehicleId: string;
-    make: string;
-    model: string;
-    year: number;
-    licensePlate: string;
-    capacity: number;
-  }
+
+export interface DriverDetails {
+  licenseNumber: string;
+  isActive: boolean;
+  vehicles: Vehicle[];
+}
+
+export interface Vehicle {
+  vehicleId: string;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  capacity: number;
+}
+
+export interface OnboardingData {
+  isDriver: boolean;
+  userType?: "rider" | "driver";
+  driverDetails?: DriverDetails;
+}

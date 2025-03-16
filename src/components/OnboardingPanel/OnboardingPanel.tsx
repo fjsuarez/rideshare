@@ -11,7 +11,6 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 import { useOnboardingForm, ExistingUserData } from './hooks/useOnboardingForm';
-import { useTheme } from '@mui/material/styles';
 import UserTypeSelector from './components/UserTypeSelector';
 import DriverDetailsForm from './components/DriverDetailsForm';
 import RiderConfirmation from './components/RiderConfirmation';
@@ -26,7 +25,6 @@ interface OnboardingPanelProps {
 }
 
 const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ onComplete, existingUserData }) => {
-  const theme = useTheme();
   const { 
     activeStep,
     userType,

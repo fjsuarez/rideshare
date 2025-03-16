@@ -29,6 +29,7 @@ const ProfilePanel: React.FC = () => {
     const existingData: ExistingUserData = {
       userType: userProfile.userType as 'rider' | 'driver',
       isDriver: userProfile.userType === 'driver',
+      onboardingCompleted: userProfile.onboardingCompleted
     };
     
     // Add driver details if available

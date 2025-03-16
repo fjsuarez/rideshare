@@ -1,15 +1,18 @@
 import apiClient from '../core/apiClient';
-import { UserProfile, DriverDetails } from '../../models/userTypes';
+import { UserProfile, OnboardingData} from '../../models/userTypes';
 
-export interface OnboardingData {
-  isDriver: boolean;
-  userType?: 'rider' | 'driver';
-  driverDetails?: DriverDetails;
-}
 
 export const userApi = {
+  async createUser(userData: Partial<UserProfile>): Promise<UserProfile> {
+    const response = await apiClient.authenticatedRequest<UserProfile>('/users/', {
+      method: 'POST',
+      data: userData
+    });
+    return response.data;
+  },
+
   async getUserProfile(): Promise<UserProfile> {
-    const response = await apiClient.authenticatedRequest<UserProfile>('/users/profile');
+    const response = await apiClient.authenticatedRequest<UserProfile>('/users/');
     return response.data;
   },
   
@@ -22,7 +25,7 @@ export const userApi = {
   },
   
   async updateProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
-    const response = await apiClient.authenticatedRequest<UserProfile>('/users/profile', {
+    const response = await apiClient.authenticatedRequest<UserProfile>('/users/', {
       method: 'PATCH',
       data: profileData
     });

@@ -2,14 +2,11 @@ import { createContext, useContext } from "react";
 import { AuthContextType } from "./types";
 import { UserProfile } from "../../services/models/userTypes";
 
-// Create the context with sensible defaults
 const AuthContext = createContext<AuthContextType>({
-  // State
   userProfile: null,
   isLoading: true,
   isAuthenticated: false,
   
-  // Operations
   loginUser: async () => {
     throw new Error("AuthContext not initialized");
   },
@@ -24,7 +21,5 @@ const AuthContext = createContext<AuthContextType>({
   },
 });
 
-// Hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
-
 export default AuthContext;

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, CancelTokenSource } from 'axios';
 import { ApiRequestOptions, ApiResponse } from './apiTypes';
 import { ApiError } from './apiError';
-import { getAuthToken } from '../../tokenService';
+import { getAuthToken, getUserData } from '../../tokenService';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -55,12 +55,15 @@ class ApiClient {
     }
     
     const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    const userHeader = getUserData().id || getUserData().uid;
+    // console.log(`Authenticated request as user ${userHeader}`);
     
     return this.request<T>(endpoint, {
       ...options,
       headers: {
         ...options.headers,
-        Authorization: authHeader
+        Authorization: authHeader,
+        'X-User-ID': userHeader
       }
     });
   }

@@ -5,6 +5,7 @@ import { userApi } from '../../../services/api/endpoints/userApi';
 export interface ExistingUserData {
   userType?: 'rider' | 'driver';
   isDriver?: boolean;
+  onboardingCompleted?: boolean;
   driverDetails?: {
     licenseNumber: string;
     isActive: boolean;
@@ -40,7 +41,7 @@ export const useOnboardingForm = (onComplete: () => void, existingUserData?: Exi
 
   // Pre-populate form with existing user data
   useEffect(() => {
-    if (existingUserData) {
+    if (existingUserData?.onboardingCompleted) {
       setIsUpdateMode(true);
       
       if (existingUserData.userType) {
@@ -112,7 +113,7 @@ export const useOnboardingForm = (onComplete: () => void, existingUserData?: Exi
     if (!validateStep()) {
       return;
     }
-    
+
     if (activeStep < 1) {
       setActiveStep(prev => prev + 1);
       setError(null);
@@ -163,14 +164,20 @@ export const useOnboardingForm = (onComplete: () => void, existingUserData?: Exi
 
       // Use update endpoint if in update mode, otherwise complete onboarding
       if (isUpdateMode) {
+        console.log('Update Mode');
         await userApi.updateProfile(requestData);
       } else {
+        console.log('Onboarding Mode');
         await userApi.completeOnboarding(requestData);
       }
       
       // Refresh user profile to get updated data
-      await refreshUserProfile();
-      
+      try {
+        await refreshUserProfile();
+      } catch (refreshError) {
+        console.error('Error refreshing profile:', refreshError);
+        // Continue execution even if refresh fails
+      }
       onComplete();
     } catch (err: any) {
       console.error(isUpdateMode ? 'Profile update error:' : 'Onboarding error:', err);
