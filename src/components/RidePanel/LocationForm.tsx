@@ -4,44 +4,32 @@ import {
   Typography, Paper
 } from '@mui/material';
 import { useAuth } from '../../context/auth';
-import { rideApi, Commute, Location } from '../../services/api/endpoints/rideApi';
+import { rideApi } from '../../services/api/endpoints/rideApi';
+import { Commute, Location } from '../../services/models/rideTypes';
+import { useTheme } from '@mui/material/styles';
 import { v4 as uuidv4 } from 'uuid';
 
 interface LocationFormProps {
-  onSuccess: () => void;
+  initialCommute?: Commute | null;
+  onSuccess: (commute: Commute) => void;
 }
 
-const LocationForm: React.FC<LocationFormProps> = ({ onSuccess }) => {
+const LocationForm: React.FC<LocationFormProps> = ({ initialCommute, onSuccess }) => {
+  const theme = useTheme();
   const { userProfile } = useAuth();
   const [homeAddress, setHomeAddress] = useState('');
   const [workAddress, setWorkAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  const [existingCommute, setExistingCommute] = useState<Commute | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUserCommute = async () => {
-      if (!userProfile?.id) return;
-      
-      try {
-        const commutes = await rideApi.getCommutes();
-        
-        if (commutes && commutes.length > 0) {
-          const userCommute = commutes[0]; // Take the first commute
-          setExistingCommute(userCommute);
-          setHomeAddress(userCommute.startLocation.address);
-          setWorkAddress(userCommute.endLocation.address);
-        }
-      } catch (err) {
-        console.error('Failed to fetch commute:', err);
-      }
-    };
-
-    if (userProfile?.id) {
-      fetchUserCommute();
+    // If we have an initialCommute, populate the form
+    if (initialCommute) {
+      setHomeAddress(initialCommute.startLocation.address);
+      setWorkAddress(initialCommute.endLocation.address);
     }
-  }, [userProfile?.id]);
+  }, [initialCommute]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,26 +38,23 @@ const LocationForm: React.FC<LocationFormProps> = ({ onSuccess }) => {
     setSuccess(null);
     
     try {
-      // Mock coordinates for demonstration - in a real app, you would use a geocoding service
       const createLocation = (address: string): Location => ({
         latitude: Math.random() * 180 - 90,  // Mock latitude between -90 and 90
         longitude: Math.random() * 360 - 180, // Mock longitude between -180 and 180
         address: address
       });
-
-      if (existingCommute) {
-        // Currently no update endpoint for commutes in the backend
-        // Would need to implement this in the backend first
-        // For now, we'll create a new commute with the updated info
-        await rideApi.createCommute({
-          ...existingCommute,
+      let savedCommute: Commute;
+      if (initialCommute) {
+        savedCommute = {
+          ...initialCommute,
           startLocation: createLocation(homeAddress),
           endLocation: createLocation(workAddress),
           updatedAt: new Date().toISOString()
-        });
+        };
+        await rideApi.createCommute(savedCommute); // Replace with updateCommute when available
         setSuccess('Commute updated successfully!');
       } else {
-        const commute: Commute = {
+        savedCommute = {
           commuteId: `commute_${uuidv4()}`,
           userId: userProfile?.id || '',
           startLocation: createLocation(homeAddress),
@@ -80,12 +65,10 @@ const LocationForm: React.FC<LocationFormProps> = ({ onSuccess }) => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        
-        await rideApi.createCommute(commute);
-        setExistingCommute(commute);
+        await rideApi.createCommute(savedCommute);
         setSuccess('Commute created successfully!');
-      }
-      onSuccess();
+      }   
+      onSuccess(savedCommute);
     } catch (err) {
       console.error('Failed to save commute:', err);
       setError('Failed to save commute information. Please try again.');
@@ -97,7 +80,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ onSuccess }) => {
   return (
     <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper' }}>
       <Typography variant="h6" gutterBottom>
-        {existingCommute ? 'Update Your Commute' : 'Create Your Commute'}
+        {initialCommute ? 'Update Your Commute' : 'Create Your Commute'}
       </Typography>
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -129,9 +112,15 @@ const LocationForm: React.FC<LocationFormProps> = ({ onSuccess }) => {
           variant="contained" 
           disabled={loading}
           fullWidth
-          sx={{ mt: 2 }}
+          sx={{ mt: 2,
+            bgcolor: `${theme.palette.accent.main}`,
+            "&:hover": {
+              bgcolor: `${theme.palette.accent.dark}`,
+            },
+            color: `${theme.palette.accent.contrastText}`,
+           }}
         >
-          {loading ? <CircularProgress size={24} /> : existingCommute ? 'Update' : 'Create'}
+          {loading ? <CircularProgress size={24} /> : initialCommute ? 'Update' : 'Create'}
         </Button>
       </Box>
     </Paper>

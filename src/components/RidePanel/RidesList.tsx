@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, Typography, Paper, List, ListItem, ListItemText, 
-  Button, CircularProgress, Alert, Chip, Divider
-} from '@mui/material';
-import { rideApi, Ride } from '../../services/api/endpoints/rideApi';
-import { useAuth } from '../../context/auth';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  Button,
+  CircularProgress,
+  Alert,
+  Chip,
+  Divider,
+} from "@mui/material";
+import { rideApi } from "../../services/api/endpoints/rideApi";
+import { useAuth } from "../../context/auth";
+import { format } from "date-fns";
+import { Ride } from "../../services/models/rideTypes";
 
 interface RidesListProps {
-  type: 'available' | 'driver' | 'rider';
+  type: "available" | "driver" | "rider";
   onSelectRide?: (ride: Ride) => void;
 }
 
@@ -21,28 +31,28 @@ const RidesList: React.FC<RidesListProps> = ({ type, onSelectRide }) => {
   useEffect(() => {
     const fetchRides = async () => {
       if (!userProfile?.id) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         let fetchedRides: Ride[] = [];
-        
+
         switch (type) {
-          case 'available':
+          case "available":
             fetchedRides = await rideApi.getAvailableRides();
             break;
-          case 'driver':
+          case "driver":
             fetchedRides = await rideApi.getDriverRides(userProfile.id);
             break;
-          case 'rider':
+          case "rider":
             fetchedRides = await rideApi.getRiderRides(userProfile.id);
             break;
         }
-        
+
         setRides(fetchedRides);
       } catch (err) {
-        console.error('Failed to fetch rides:', err);
+        console.error("Failed to fetch rides:", err);
         setError(`Failed to load ${type} rides.`);
       } finally {
         setLoading(false);
@@ -54,7 +64,7 @@ const RidesList: React.FC<RidesListProps> = ({ type, onSelectRide }) => {
 
   const formatDateTime = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
+      return format(new Date(dateString), "MMM d, yyyy h:mm a");
     } catch (e) {
       return dateString;
     }
@@ -77,18 +87,18 @@ const RidesList: React.FC<RidesListProps> = ({ type, onSelectRide }) => {
   }
 
   return (
-    <Paper elevation={0} sx={{ p: 0, bgcolor: 'background.paper' }}>
+    <Paper elevation={0} sx={{ p: 0, bgcolor: "background.paper" }}>
       <List disablePadding>
         {rides.map((ride, index) => (
           <React.Fragment key={ride.rideId}>
             {index > 0 && <Divider />}
-            <ListItem 
+            <ListItem
               alignItems="flex-start"
               secondaryAction={
                 onSelectRide && (
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
+                  <Button
+                    variant="outlined"
+                    size="small"
                     onClick={() => onSelectRide(ride)}
                   >
                     View
@@ -98,26 +108,50 @@ const RidesList: React.FC<RidesListProps> = ({ type, onSelectRide }) => {
             >
               <ListItemText
                 primary={
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle1">
-                      {ride.startLocation.address.substring(0, 20)}... → {ride.endLocation.address.substring(0, 20)}...
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      pr: 7,
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      noWrap
+                      sx={{ maxWidth: "70%" }}
+                    >
+                      {ride.startLocation.address.substring(0, 20)}... →{" "}
+                      {ride.endLocation.address.substring(0, 20)}...
                     </Typography>
-                    <Chip 
-                      label={`${ride.availableSeats}/${ride.totalSeats} seats`} 
-                      size="small" 
+                    <Chip
+                      label={`${ride.availableSeats}/${ride.totalSeats} seats`}
+                      size="small"
                       color={ride.availableSeats > 0 ? "success" : "error"}
                     />
                   </Box>
                 }
+                disableTypography
                 secondary={
-                  <React.Fragment>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDateTime(ride.startTime)} - {formatDateTime(ride.endTime)}
+                  <Box component="div">
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      component="span"
+                    >
+                      {formatDateTime(ride.startTime)} -{" "}
+                      {formatDateTime(ride.endTime)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {ride.daysOfWeek?.join(", ") || "One-time ride"}
-                    </Typography>
-                  </React.Fragment>
+                    <Box mt={0.5}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        component="span"
+                      >
+                        {ride.daysOfWeek?.join(", ") || "One-time ride"}
+                      </Typography>
+                    </Box>
+                  </Box>
                 }
               />
             </ListItem>

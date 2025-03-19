@@ -1,75 +1,25 @@
-import axios from 'axios';
-
-// Base API URL - this should match your API gateway configuration
-const API_BASE_URL = '';
-
-// Type definitions matching backend models
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address: string;
-}
-
-export interface RiderDetail {
-  requestId: string;
-  rideStatus: 'pending' | 'approved' | 'rejected';
-  pickupLocation?: Location;
-  dropoffLocation?: Location;
-}
-
-export interface Ride {
-  rideId: string;
-  driverId: string;
-  startLocation: Location;
-  endLocation: Location;
-  startTime: string;
-  endTime: string;
-  daysOfWeek?: string[];
-  availableSeats: number;
-  totalSeats: number;
-  status: 'active' | 'cancelled' | 'completed';
-  riders?: Record<string, RiderDetail>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface RideRequest {
-  requestId: string;
-  rideId: string;
-  riderId: string;
-  status: 'pending' | 'approved' | 'rejected';
-  pickupLocation?: Location;
-  dropoffLocation?: Location;
-  createdAt: string;
-}
-
-export interface Commute {
-  commuteId: string;
-  userId: string;
-  startLocation: Location;
-  endLocation: Location;
-  preferredStartTime: string;
-  preferredEndTime: string;
-  daysOfWeek: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import apiClient from '../core/apiClient';
+import { Commute, Ride, RideRequest } from '../../models/rideTypes';
 
 export const rideApi = {
   // Commute endpoints
   async createCommute(commute: Commute): Promise<Commute> {
-    const response = await axios.post(`${API_BASE_URL}/rides/commutes`, commute);
+    const response = await apiClient.authenticatedRequest<Commute>('/rides/commutes', {
+      method: 'POST',
+      data: commute
+    });
     return response.data;
   },
 
   async getCommutes(): Promise<Commute[]> {
-    const response = await axios.get(`${API_BASE_URL}/rides/commutes`);
+    const response = await apiClient.authenticatedRequest<Commute[]>('/rides/commutes');
     return response.data;
   },
 
   // Available rides
   async getAvailableRides(maxDistance: number = 5.0): Promise<Ride[]> {
-    const response = await axios.get(`${API_BASE_URL}/rides/available`, {
+    const response = await apiClient.authenticatedRequest<Ride[]>('/rides/available', {
+      method: 'GET',
       params: { max_distance: maxDistance }
     });
     return response.data;
@@ -77,49 +27,61 @@ export const rideApi = {
 
   // Ride endpoints
   async getAllRides(): Promise<Ride[]> {
-    const response = await axios.get(`${API_BASE_URL}/rides`);
+    const response = await apiClient.authenticatedRequest<Ride[]>('/rides');
     return response.data;
   },
 
   async getRideById(rideId: string): Promise<Ride> {
-    const response = await axios.get(`${API_BASE_URL}/rides/${rideId}`);
+    const response = await apiClient.authenticatedRequest<Ride>(`/rides/${rideId}`);
     return response.data;
   },
 
   async createRide(ride: Ride): Promise<Ride> {
-    const response = await axios.post(`${API_BASE_URL}/rides`, ride);
+    const response = await apiClient.authenticatedRequest<Ride>('/rides', {
+      method: 'POST',
+      data: ride
+    });
     return response.data;
   },
 
   async deleteRide(rideId: string): Promise<any> {
-    const response = await axios.delete(`${API_BASE_URL}/rides/${rideId}`);
+    const response = await apiClient.authenticatedRequest<any>(`/rides/${rideId}`, {
+      method: 'DELETE'
+    });
     return response.data;
   },
 
   // Driver/Rider specific endpoints
   async getDriverRides(driverId: string): Promise<Ride[]> {
-    const response = await axios.get(`${API_BASE_URL}/rides/driver/${driverId}`);
+    const response = await apiClient.authenticatedRequest<Ride[]>(`/rides/driver/${driverId}`);
     return response.data;
   },
 
   async getRiderRides(riderId: string): Promise<Ride[]> {
-    const response = await axios.get(`${API_BASE_URL}/rides/rider/${riderId}`);
+    const response = await apiClient.authenticatedRequest<Ride[]>(`/rides/rider/${riderId}`);
     return response.data;
   },
 
   // Ride request endpoints
   async requestRide(request: RideRequest): Promise<RideRequest> {
-    const response = await axios.post(`${API_BASE_URL}/rides/requests`, request);
+    const response = await apiClient.authenticatedRequest<RideRequest>('/rides/requests', {
+      method: 'POST',
+      data: request
+    });
     return response.data;
   },
 
   async approveRideRequest(requestId: string): Promise<any> {
-    const response = await axios.put(`${API_BASE_URL}/rides/requests/${requestId}/approve`);
+    const response = await apiClient.authenticatedRequest<any>(`/rides/requests/${requestId}/approve`, {
+      method: 'PUT'
+    });
     return response.data;
   },
 
   async rejectRideRequest(requestId: string): Promise<any> {
-    const response = await axios.put(`${API_BASE_URL}/rides/requests/${requestId}/reject`);
+    const response = await apiClient.authenticatedRequest<any>(`/rides/requests/${requestId}/reject`, {
+      method: 'PUT'
+    });
     return response.data;
   }
 };

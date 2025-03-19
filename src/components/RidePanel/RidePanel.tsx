@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, Tabs, Tab, Typography, Paper, Button, 
-  Dialog, DialogTitle, DialogContent, DialogActions 
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  CircularProgress
 } from '@mui/material';
 import LocationForm from './LocationForm';
+import CommuteInfo from './CommuteInfo';
 import RidesList from './RidesList';
 import { useAuth } from '../../context/auth';
-import { Ride, RideRequest, rideApi } from '../../services/api/endpoints/rideApi';
+import { rideApi } from '../../services/api/endpoints/rideApi';
+import { Ride, RideRequest, Commute } from '../../services/models/rideTypes';
 import { v4 as uuidv4 } from 'uuid';
 
 interface TabPanelProps {
@@ -34,13 +37,39 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
-
 const RidePanel: React.FC = () => {
   const { userProfile } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [commuteSetup, setCommuteSetup] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [commute, setCommute] = useState<Commute | null>(null);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [openRequestDialog, setOpenRequestDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCommute = async () => {
+      if (!userProfile?.id) return;
+      
+      try {
+        setIsLoading(true);
+        const commutes = await rideApi.getCommutes();
+        
+        if (commutes && commutes.length > 0) {
+          setCommute(commutes[0]);
+          setIsEditMode(false);
+        } else {
+          setIsEditMode(true);
+        }
+      } catch (error) {
+        console.error('Error fetching commute:', error);
+        setIsEditMode(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCommute();
+  }, [userProfile?.id]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -58,6 +87,7 @@ const RidePanel: React.FC = () => {
       // In a real app, you'd get pickup/dropoff from user input
       // Here we're just using ride start/end locations
       const rideRequest: RideRequest = {
+        driverId: selectedRide.driverId,
         requestId: `req_${uuidv4()}`,
         rideId: selectedRide.rideId,
         riderId: userProfile.id,
@@ -76,23 +106,39 @@ const RidePanel: React.FC = () => {
     }
   };
 
-  const handleCommuteSetupComplete = () => {
-    setCommuteSetup(true);
+  const handleCommuteUpdated = (updatedCommute: Commute) => {
+    setCommute(updatedCommute);
+    setIsEditMode(false);
   };
+
+  const handleEditCommute = () => {
+    setIsEditMode(true);
+  };
+
+  if (isLoading) {
+    return (
+      <Paper sx={{ width: '100%', p: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Paper>
+    );
+  }
 
   return (
     <Paper sx={{ width: '100%', bgcolor: 'background.paper' }}>
-      {!commuteSetup ? (
-        <Box sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Set Up Your Commute
-          </Typography>
-          <Typography variant="body1" gutterBottom>
-            Before you can find or offer rides, please set up your commute details.
-          </Typography>
-          <LocationForm onSuccess={handleCommuteSetupComplete} />
-        </Box>
-      ) : (
+      {/* Commute Section */}
+      <Box sx={{ p: 2, borderBottom: '1px solid rgba(0, 0, 0, 0.12)' }}>
+        {isEditMode ? (
+          <LocationForm 
+            initialCommute={commute} 
+            onSuccess={handleCommuteUpdated} 
+          />
+        ) : (
+          commute && <CommuteInfo commute={commute} onEdit={handleEditCommute} />
+        )}
+      </Box>
+
+      {/* Ride Lists - Only show if we have commute data */}
+      {commute && (
         <>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="ride tabs">
@@ -113,6 +159,7 @@ const RidePanel: React.FC = () => {
         </>
       )}
 
+      {/* Request Dialog */}
       <Dialog open={openRequestDialog} onClose={() => setOpenRequestDialog(false)}>
         <DialogTitle>Request Ride</DialogTitle>
         <DialogContent>
