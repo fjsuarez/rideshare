@@ -1,0 +1,16 @@
+.leaflet-container {
+    font-family: inherit;
+  }
+  
+  .custom-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+  }
+  
+  .custom-popup .leaflet-popup-content {
+    margin: 8px;
+  }
+  
+  .custom-popup .leaflet-popup-tip {
+    box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+  }

@@ -51,7 +51,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ initialCommute, onSuccess }
           endLocation: createLocation(workAddress),
           updatedAt: new Date().toISOString()
         };
-        await rideApi.createCommute(savedCommute); // Replace with updateCommute when available
+        await rideApi.updateCommute(savedCommute);
         setSuccess('Commute updated successfully!');
       } else {
         savedCommute = {

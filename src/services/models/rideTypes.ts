@@ -32,10 +32,11 @@ export interface Location {
     driverId: string;
     rideId: string;
     riderId: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'cancelled';
     pickupLocation?: Location;
     dropoffLocation?: Location;
     createdAt: string;
+    updatedAt?: string
   }
   
   export interface Commute {
@@ -48,4 +49,5 @@ export interface Location {
     daysOfWeek: string[];
     createdAt: string;
     updatedAt: string;
+    ride_distances?: Array<{ ride_id: string, distance: number }>;
   }

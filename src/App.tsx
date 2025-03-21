@@ -2,6 +2,7 @@ import Paper from "@mui/material/Paper";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { AuthProvider, useAuth } from "./context/auth";
+import { RideProvider } from "./context/ride/RideContext";
 
 import Header from "./components/Header";
 import MainContent from "./components/MainContent";
@@ -38,7 +39,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <RideProvider>
+        <AppContent />
+      </RideProvider>
     </AuthProvider>
   );
 }

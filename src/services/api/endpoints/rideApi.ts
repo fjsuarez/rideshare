@@ -4,7 +4,7 @@ import { Commute, Ride, RideRequest } from '../../models/rideTypes';
 export const rideApi = {
   // Commute endpoints
   async createCommute(commute: Commute): Promise<Commute> {
-    const response = await apiClient.authenticatedRequest<Commute>('/rides/commutes', {
+    const response = await apiClient.authenticatedRequest<Commute>('/rides/commutes/', {
       method: 'POST',
       data: commute
     });
@@ -12,13 +12,21 @@ export const rideApi = {
   },
 
   async getCommutes(): Promise<Commute[]> {
-    const response = await apiClient.authenticatedRequest<Commute[]>('/rides/commutes');
+    const response = await apiClient.authenticatedRequest<Commute[]>('/rides/commutes/');
+    return response.data;
+  },
+
+  async updateCommute(commute: Commute): Promise<Commute> {
+    const response = await apiClient.authenticatedRequest<Commute>(`/rides/commutes/${commute.commuteId}`, {
+      method: 'PUT',
+      data: commute
+    });
     return response.data;
   },
 
   // Available rides
   async getAvailableRides(maxDistance: number = 5.0): Promise<Ride[]> {
-    const response = await apiClient.authenticatedRequest<Ride[]>('/rides/available', {
+    const response = await apiClient.authenticatedRequest<Ride[]>('/rides/available/', {
       method: 'GET',
       params: { max_distance: maxDistance }
     });
@@ -37,8 +45,16 @@ export const rideApi = {
   },
 
   async createRide(ride: Ride): Promise<Ride> {
-    const response = await apiClient.authenticatedRequest<Ride>('/rides', {
+    const response = await apiClient.authenticatedRequest<Ride>('/rides/', {
       method: 'POST',
+      data: ride
+    });
+    return response.data;
+  },
+
+  async updateRide(ride: Ride): Promise<Ride> {
+    const response = await apiClient.authenticatedRequest<Ride>(`/rides/${ride.rideId}`, {
+      method: 'PUT',
       data: ride
     });
     return response.data;
@@ -68,6 +84,16 @@ export const rideApi = {
       method: 'POST',
       data: request
     });
+    return response.data;
+  },
+
+  async getRiderRequests(riderId: string): Promise<RideRequest[]> {
+    const response = await apiClient.authenticatedRequest<RideRequest[]>(`/rides/requests/rider/${riderId}`);
+    return response.data;
+  },
+
+  async getDriverRequests(driverId: string): Promise<RideRequest[]> {
+    const response = await apiClient.authenticatedRequest<RideRequest[]>(`/rides/requests/driver/${driverId}`);
     return response.data;
   },
 

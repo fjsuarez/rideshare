@@ -14,152 +14,347 @@ import {
 } from "@mui/material";
 import { rideApi } from "../../services/api/endpoints/rideApi";
 import { useAuth } from "../../context/auth";
-import { format } from "date-fns";
-import { Ride } from "../../services/models/rideTypes";
+import { useRide } from "../../context/ride/RideContext";
+import { useTheme } from "@mui/material/styles";
+import { Ride, RideRequest } from "../../services/models/rideTypes";
 
 interface RidesListProps {
-  type: "available" | "driver" | "rider";
+  type: "available" | "driver" | "rider" | "requests";
   onSelectRide?: (ride: Ride) => void;
+  filter?: "pending" | "accepted" | "rejected";
 }
 
-const RidesList: React.FC<RidesListProps> = ({ type, onSelectRide }) => {
+const RidesList: React.FC<RidesListProps> = ({
+  type,
+  onSelectRide,
+  filter,
+}) => {
   const { userProfile } = useAuth();
+  const { selectedRide, selectRide, selectedRequest, selectRequest } =
+    useRide();
+  const theme = useTheme();
   const [rides, setRides] = useState<Ride[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [requests, setRequests] = useState<RideRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isRideSelected = (ride: Ride) => selectedRide?.rideId === ride.rideId;
+  const isRequestSelected = (request: RideRequest) =>
+    selectedRequest?.requestId === request.requestId;
+
+  const selectedItemStyle = {
+    border: "2px solid",
+    borderColor: "primary.main",
+    borderRadius: "4px",
+    mb: 1,
+    bgcolor: "action.selected",
+  };
 
   useEffect(() => {
-    const fetchRides = async () => {
+    const fetchData = async () => {
       if (!userProfile?.id) return;
 
       setLoading(true);
-      setError(null);
-
       try {
-        let fetchedRides: Ride[] = [];
-
         switch (type) {
           case "available":
-            fetchedRides = await rideApi.getAvailableRides();
+            const availableRides = await rideApi.getAvailableRides();
+            setRides(availableRides);
             break;
+
           case "driver":
-            fetchedRides = await rideApi.getDriverRides(userProfile.id);
+            const driverRides = await rideApi.getDriverRides(userProfile.id);
+            setRides(driverRides);
             break;
+
           case "rider":
-            fetchedRides = await rideApi.getRiderRides(userProfile.id);
+            const riderRides = await rideApi.getRiderRides(userProfile.id);
+            setRides(riderRides);
+            break;
+
+          case "requests":
+            if (userProfile.userType === "rider") {
+              // Get requests made by this rider
+              const riderRequests = await rideApi.getRiderRequests(
+                userProfile.id
+              );
+              // Filter by status if needed
+              setRequests(
+                filter
+                  ? riderRequests.filter((req) => req.status === filter)
+                  : riderRequests
+              );
+            } else if (userProfile.userType === "driver") {
+              // Get requests for this driver's rides
+              const driverRequests = await rideApi.getDriverRequests(
+                userProfile.id
+              );
+              // Filter by status if needed
+              setRequests(
+                filter
+                  ? driverRequests.filter((req) => req.status === filter)
+                  : driverRequests
+              );
+            }
             break;
         }
-
-        setRides(fetchedRides);
-      } catch (err) {
-        console.error("Failed to fetch rides:", err);
-        setError(`Failed to load ${type} rides.`);
+      } catch (error) {
+        console.error(`Error fetching ${type}:`, error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRides();
-  }, [userProfile?.id, type]);
+    fetchData();
+  }, [type, userProfile?.id, filter, userProfile?.userType]);
 
-  const formatDateTime = (dateString: string) => {
+  const handleApproveRequest = async (requestId: string) => {
     try {
-      return format(new Date(dateString), "MMM d, yyyy h:mm a");
-    } catch (e) {
-      return dateString;
+      await rideApi.approveRideRequest(requestId);
+      // Refresh the list after approval
+      if (userProfile?.id) {
+        const updatedRequests = await rideApi.getDriverRequests(userProfile.id);
+        setRequests(
+          filter
+            ? updatedRequests.filter((req) => req.status === filter)
+            : updatedRequests
+        );
+      }
+    } catch (error) {
+      console.error("Error approving request:", error);
     }
   };
 
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await rideApi.rejectRideRequest(requestId);
+      // Refresh the list after rejection
+      if (userProfile?.id) {
+        const updatedRequests = await rideApi.getDriverRequests(userProfile.id);
+        setRequests(
+          filter
+            ? updatedRequests.filter((req) => req.status === filter)
+            : updatedRequests
+        );
+      }
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+    }
+  };
+
+  const getStatusChip = (status: string) => {
+    let color:
+      | "default"
+      | "primary"
+      | "secondary"
+      | "error"
+      | "info"
+      | "success"
+      | "warning" = "default";
+
+    switch (status) {
+      case "pending":
+        color = "warning";
+        break;
+      case "accepted":
+        color = "success";
+        break;
+      case "rejected":
+        color = "error";
+        break;
+    }
+
+    return <Chip label={status.toUpperCase()} color={color} size="small" />;
+  };
+
   if (loading) {
-    return <CircularProgress />;
-  }
-
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
-  }
-
-  if (rides.length === 0) {
     return (
-      <Typography variant="body1" sx={{ p: 2 }}>
-        No {type} rides found.
-      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
-  return (
-    <Paper elevation={0} sx={{ p: 0, bgcolor: "background.paper" }}>
-      <List disablePadding>
-        {rides.map((ride, index) => (
-          <React.Fragment key={ride.rideId}>
-            {index > 0 && <Divider />}
+  if (type === "requests") {
+    if (requests.length === 0) {
+      return (
+        <Typography variant="body1" sx={{ p: 2 }}>
+          No requests found.
+        </Typography>
+      );
+    }
+
+    return (
+      <List>
+        {requests.map((request) => (
+          <React.Fragment key={request.requestId}>
             <ListItem
               alignItems="flex-start"
+              onClick={() => selectRequest(request)}
+              sx={{
+                cursor: "pointer",
+                ...(isRequestSelected(request) ? selectedItemStyle : {}),
+              }}
               secondaryAction={
-                onSelectRide && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => onSelectRide(ride)}
-                  >
-                    View
-                  </Button>
+                userProfile?.userType === "driver" &&
+                request.status === "pending" ? (
+                  <Box onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={() => handleApproveRequest(request.requestId)}
+                      sx={{
+                        mr: 1,
+                        bgcolor: `${theme.palette.accent.main}`,
+                        "&:hover": {
+                          bgcolor: `${theme.palette.accent.dark}`,
+                        },
+                        color: `${theme.palette.accent.contrastText}`,
+                      }}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleRejectRequest(request.requestId)}
+                    >
+                      Reject
+                    </Button>
+                  </Box>
+                ) : (
+                  getStatusChip(request.status)
                 )
               }
             >
               <ListItemText
                 primary={
                   <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      pr: 7,
-                    }}
+                    sx={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    <Typography
-                      variant="subtitle1"
-                      noWrap
-                      sx={{ maxWidth: "70%" }}
-                    >
-                      {ride.startLocation.address.substring(0, 20)}... →{" "}
-                      {ride.endLocation.address.substring(0, 20)}...
+                    <Typography variant="subtitle1">
+                      From: {request.pickupLocation.address}
                     </Typography>
-                    <Chip
-                      label={`${ride.availableSeats}/${ride.totalSeats} seats`}
-                      size="small"
-                      color={ride.availableSeats > 0 ? "success" : "error"}
-                    />
                   </Box>
                 }
-                disableTypography
                 secondary={
-                  <Box component="div">
+                  <>
                     <Typography
-                      variant="body2"
-                      color="text.secondary"
                       component="span"
+                      variant="body2"
+                      display="block"
                     >
-                      {formatDateTime(ride.startTime)} -{" "}
-                      {formatDateTime(ride.endTime)}
+                      To: {request.dropoffLocation.address}
                     </Typography>
-                    <Box mt={0.5}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="span"
-                      >
-                        {ride.daysOfWeek?.join(", ") || "One-time ride"}
-                      </Typography>
-                    </Box>
-                  </Box>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      display="block"
+                      sx={{ mt: 1 }}
+                    >
+                      Requested: {new Date(request.createdAt).toLocaleString()}
+                    </Typography>
+                  </>
                 }
               />
             </ListItem>
+            <Divider component="li" />
           </React.Fragment>
         ))}
       </List>
-    </Paper>
+    );
+  }
+
+  // Regular rides list (available, driver, rider)
+  if (rides.length === 0) {
+    return (
+      <Typography variant="body1" sx={{ p: 2 }}>
+        No rides found.
+      </Typography>
+    );
+  }
+
+  return (
+    <>
+      <List>
+        {rides.map((ride) => (
+          <React.Fragment key={ride.rideId}>
+            <ListItem
+              alignItems="flex-start"
+              onClick={() => {
+                selectRide(ride);
+              }}
+              sx={{
+                cursor: "pointer",
+                ...(isRideSelected(ride) ? selectedItemStyle : {}),
+              }}
+            >
+              <ListItemText
+                primary={
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography variant="subtitle1">
+                      From: {ride.startLocation.address}
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date(ride.startTime).toLocaleString()}
+                    </Typography>
+                  </Box>
+                }
+                secondary={
+                  <>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      display="block"
+                    >
+                      To: {ride.endLocation.address}
+                    </Typography>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      display="block"
+                      sx={{ mt: 1 }}
+                    >
+                      Available Seats: {ride.availableSeats}/{ride.totalSeats}
+                    </Typography>
+                  </>
+                }
+              />
+            </ListItem>
+            <Divider component="li" />
+          </React.Fragment>
+        ))}
+      </List>
+
+      {type === "available" && (
+        <Box sx={{ display: "flex", justifyContent: "center" }}>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!selectedRide}
+            onClick={() => {
+              if (selectedRide && onSelectRide) {
+                onSelectRide(selectedRide);
+              }
+            }}
+            sx={{
+              minWidth: "200px",
+              width: "100%",
+              bgcolor: `${theme.palette.accent.main}`,
+              "&:hover": {
+                bgcolor: `${theme.palette.accent.dark}`,
+              },
+              color: `${theme.palette.accent.contrastText}`,
+            }}
+          >
+            {selectedRide ? "Request Selected Ride" : "Select a Ride"}
+          </Button>
+        </Box>
+      )}
+    </>
   );
 };
-
 export default RidesList;

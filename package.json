@@ -15,7 +15,7 @@
     "@fontsource/roboto": "^5.2.5",
     "@mui/icons-material": "^6.4.6",
     "@mui/material": "^6.4.6",
-    "@mui/x-date-pickers": "^7.27.3",
+    "@mui/x-date-pickers": "^7.28.0",
     "@types/uuid": "^10.0.0",
     "axios": "^1.8.2",
     "date-fns": "^4.1.0",
