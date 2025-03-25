@@ -3,6 +3,7 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { AuthProvider, useAuth } from "./context/auth";
 import { RideProvider } from "./context/ride/RideContext";
+import { SnackbarProvider } from 'notistack';
 
 import Header from "./components/Header";
 import MainContent from "./components/MainContent";
@@ -40,7 +41,7 @@ function App() {
   return (
     <AuthProvider>
       <RideProvider>
-        <AppContent />
+          <AppContent />
       </RideProvider>
     </AuthProvider>
   );

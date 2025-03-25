@@ -7,11 +7,16 @@ export default defineConfig({
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },
   server: {
+    headers: {
+      'Service-Worker-Allowed': '/',
+      '.js': 'application/javascript',
+    },
     proxy: {
       '/api': { 
         target: 'http://localhost:8000',
         changeOrigin: true,
       }
     }
-  }
+  },
+  publicDir: 'public',
 });

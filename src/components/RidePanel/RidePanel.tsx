@@ -18,10 +18,14 @@ import CommuteInfo from "./CommuteInfo";
 import RideInfo from "./RideInfo";
 import RidesList from "./RidesList";
 import { useAuth } from "../../context/auth";
+import { useRide } from "../../context/ride/RideContext";
 import { rideApi } from "../../services/api/endpoints/rideApi";
 import { Ride, RideRequest, Commute } from "../../services/models/rideTypes";
 import { v4 as uuidv4 } from "uuid";
 import TabPanel from "./TabPanel";
+import { useSnackbar } from "notistack";
+import { messaging } from "../../firebase";
+import { onMessage } from "firebase/messaging";
 
 const RidePanel: React.FC = () => {
   const { userProfile } = useAuth();
@@ -33,7 +37,9 @@ const RidePanel: React.FC = () => {
   const [openRequestDialog, setOpenRequestDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<"rider" | "driver" | null>(null);
-
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const { selectRide, selectRequest } = useRide();
+  
   useEffect(() => {
     if (userProfile) {
       setUserRole(userProfile.userType);
@@ -79,6 +85,44 @@ const RidePanel: React.FC = () => {
       fetchUserData();
     }
   }, [userProfile?.id, userRole]);
+
+  useEffect(() => {
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("Message received. ", payload);
+      const action = (snackbarId: string) => (
+        <>
+          <Button
+            sx={{ color: "accent.contrastText" }}
+            onClick={() => {
+              console.log("userRole is", userProfile?.userType)
+              const tab = userProfile?.userType === "rider" ? 1 : 0;
+              console.log("Opening tab", tab);
+              handleTabChange(null, tab);
+              rideApi.getRideById(payload.data.rideId).then((ride) => {
+                selectRide(ride);
+              });
+              closeSnackbar(snackbarId);
+            }}
+          >
+            View
+          </Button>
+          <Button
+            sx={{ color: "accent.dark" }}
+            onClick={() => {
+              closeSnackbar(snackbarId);
+            }}
+          >
+            Dismiss
+          </Button>
+        </>
+      );
+      enqueueSnackbar(payload.notification.body, { action });
+    });
+  
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -179,13 +223,13 @@ const RidePanel: React.FC = () => {
               aria-label="ride tabs"
             >
               {userRole === "rider"
-                ? // Rider tabs - without fragment
+                ? // Rider tabs
                   [
                     <Tab key="available" label="Available Rides" />,
                     <Tab key="requests" label="My Requests" />,
                     <Tab key="rides" label="My Rides" />,
                   ]
-                : // Driver tabs - without fragment
+                : // Driver tabs
                   [
                     <Tab key="pending" label="Pending Requests" />,
                     <Tab key="drives" label="My Drives" />,

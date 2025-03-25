@@ -13,6 +13,7 @@ import {
   Divider,
 } from "@mui/material";
 import { rideApi } from "../../services/api/endpoints/rideApi";
+import { notificationApi } from '../../services/api/endpoints/notificationApi';
 import { useAuth } from "../../context/auth";
 import { useRide } from "../../context/ride/RideContext";
 import { useTheme } from "@mui/material/styles";
@@ -107,9 +108,22 @@ const RidesList: React.FC<RidesListProps> = ({
     fetchData();
   }, [type, userProfile?.id, filter, userProfile?.userType]);
 
-  const handleApproveRequest = async (requestId: string) => {
+  const handleApproveRequest = async (requestId: string, request: RideRequest) => {
     try {
       await rideApi.approveRideRequest(requestId);
+      
+      // Send notification to the rider
+      await notificationApi.sendNotification({
+        userId: request.riderId,
+        title: "Ride Request Approved",
+        body: `Your ride request from ${request.pickupLocation.address} has been approved!`,
+        data: {
+          type: "request_update",
+          requestId: requestId,
+          status: "accepted"
+        }
+      });
+
       // Refresh the list after approval
       if (userProfile?.id) {
         const updatedRequests = await rideApi.getDriverRequests(userProfile.id);
@@ -124,9 +138,21 @@ const RidesList: React.FC<RidesListProps> = ({
     }
   };
 
-  const handleRejectRequest = async (requestId: string) => {
+  const handleRejectRequest = async (requestId: string, request: RideRequest) => {
     try {
       await rideApi.rejectRideRequest(requestId);
+      
+      // Send notification to the rider
+      await notificationApi.sendNotification({
+        userId: request.riderId,
+        title: "Ride Request Rejected",
+        body: `Your ride request from ${request.pickupLocation.address} has been rejected.`,
+        data: {
+          type: "request_update",
+          requestId: requestId,
+          status: "rejected"
+        }
+      });
       // Refresh the list after rejection
       if (userProfile?.id) {
         const updatedRequests = await rideApi.getDriverRequests(userProfile.id);
@@ -202,7 +228,7 @@ const RidesList: React.FC<RidesListProps> = ({
                       variant="contained"
                       color="primary"
                       size="small"
-                      onClick={() => handleApproveRequest(request.requestId)}
+                      onClick={() => handleApproveRequest(request.requestId, request)}
                       sx={{
                         mr: 1,
                         bgcolor: `${theme.palette.accent.main}`,
@@ -218,7 +244,7 @@ const RidesList: React.FC<RidesListProps> = ({
                       variant="outlined"
                       color="error"
                       size="small"
-                      onClick={() => handleRejectRequest(request.requestId)}
+                      onClick={() => handleRejectRequest(request.requestId, request)}
                     >
                       Reject
                     </Button>

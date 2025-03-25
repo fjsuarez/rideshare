@@ -1,4 +1,6 @@
 import apiClient from '../core/apiClient';
+import { notificationApi } from './notificationApi';
+
 import { Commute, Ride, RideRequest } from '../../models/rideTypes';
 
 export const rideApi = {
@@ -84,6 +86,30 @@ export const rideApi = {
       method: 'POST',
       data: request
     });
+
+    try {
+      // Get the ride details to include in the notification
+      const ride = await this.getRideById(request.rideId);
+      
+      await notificationApi.sendNotification({
+        userId: ride.driverId,
+        title: "New Ride Request",
+        body: `Someone wants to join your ride to ${ride.endLocation.address}`,
+        data: {
+          type: "ride_request",
+          rideId: request.rideId,
+          requestId: response.data.requestId
+        }
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      // Continue even if notification fails
+    }
+    return response.data;
+  },
+
+  async getRideRequestById(requestId: string): Promise<RideRequest> {
+    const response = await apiClient.authenticatedRequest<RideRequest>(`/rides/requests/${requestId}`);
     return response.data;
   },
 

@@ -1,21 +1,62 @@
 import Grid from "@mui/material/Grid2";
-
+import Button from "@mui/material/Button";
 import ProfilePanel from "./ProfilePanel/ProfilePanel";
 import RidePanel from "./RidePanel";
 import MapPanel from "./MapPanel";
 import ListDrawer from "./ListDrawer";
+
+import { SnackbarProvider, enqueueSnackbar, closeSnackbar } from "notistack";
+import { useEffect } from "react";
+import { getToken } from "firebase/messaging";
+import { messaging } from "../firebase";
+import notificationApi from "../services/api/endpoints/notificationApi";
+import { useAuth } from "../context/auth";
 
 interface AuthenticatedContentProps {
   isSmallScreen: boolean;
 }
 
 function AuthenticatedContent({ isSmallScreen }: AuthenticatedContentProps) {
+  const { userProfile } = useAuth();
+  const { VITE_APP_VAPID_KEY } = import.meta.env;
+
+  async function requestPermission() {
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: VITE_APP_VAPID_KEY,
+      });
+      notificationApi.registerToken(userProfile?.id, token);
+
+      console.log("Token generated : ", token);
+    } else if (permission === "denied") {
+      alert("You denied for the notification");
+    }
+  }
+
+  useEffect(() => {
+    requestPermission();
+    console.log("Mounting AuthenticatedContent");
+    enqueueSnackbar("Welcome to RideShare!");
+  }, []);
+
   return (
     <>
-      <ProfileSection />
-      <ListSection />
-      <MapSection />
-      {isSmallScreen && <ListDrawer />}
+      <SnackbarProvider
+        autoHideDuration={2000}
+        variant="info"
+        maxSnack={3}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <ProfileSection />
+        <ListSection />
+        <MapSection />
+        {isSmallScreen && <ListDrawer />}
+      </SnackbarProvider>
     </>
   );
 }

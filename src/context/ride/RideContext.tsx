@@ -29,6 +29,7 @@ export const RideProvider: React.FC<RideProviderProps> = ({ children }) => {
   const [selectedRequest, setSelectedRequest] = useState<RideRequest | null>(null);
 
   const selectRide = (ride: Ride | null) => {
+    console.log("Selecting ride", ride);
     setSelectedRide(ride);
     // Clear selected request when selecting a ride
     if (ride) setSelectedRequest(null);
