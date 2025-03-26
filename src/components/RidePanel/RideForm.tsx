@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, TextField, Button, CircularProgress, Alert, 
   Typography, Paper, FormControl, InputLabel,
@@ -11,13 +11,87 @@ import { useTheme } from '@mui/material/styles';
 import { v4 as uuidv4 } from 'uuid';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 
 interface RideFormProps {
   initialRide?: Ride | null;
   onSuccess: (ride: Ride) => void;
 }
 
-const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+const AddressAutocomplete = ({ 
+  label, 
+  value, 
+  onChange, 
+  onPlaceSelect,
+  placeholder 
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (value: string) => void;
+  onPlaceSelect: (place: google.maps.places.PlaceResult) => void;
+  placeholder: string;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const places = useMapsLibrary('places');
+  
+  // Store the latest callbacks in refs to avoid dependency issues
+  const onChangeRef = useRef(onChange);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
+  
+  // Update refs when props change
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onPlaceSelectRef.current = onPlaceSelect;
+  }, [onChange, onPlaceSelect]);
+
+  useEffect(() => {
+    if (!places || !inputRef.current) return;
+    
+    // Only create autocomplete if it doesn't exist yet
+    if (!autocompleteRef.current) {
+      const options = {
+        fields: ['address_components', 'geometry', 'formatted_address'],
+        types: ['address'],
+        componentRestrictions: { country: 'es',}
+      };
+
+      autocompleteRef.current = new places.Autocomplete(inputRef.current, options);
+      
+      const listener = autocompleteRef.current.addListener('place_changed', () => {
+        const place = autocompleteRef.current?.getPlace();
+        if (place && place.formatted_address) {
+          onChangeRef.current(place.formatted_address);
+          onPlaceSelectRef.current(place);
+        }
+      });
+
+      return () => {
+        if (places && autocompleteRef.current) {
+          google.maps.event.removeListener(listener);
+          autocompleteRef.current = null;
+        }
+      };
+    }
+  }, [places]); // Only depend on places library
+
+  return (
+    <TextField
+      label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      fullWidth
+      required
+      margin="normal"
+      placeholder={placeholder}
+      inputRef={inputRef}
+    />
+  );
+};
+
+const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   const theme = useTheme();
   const { userProfile } = useAuth();
   const [startAddress, setStartAddress] = useState('');
@@ -27,6 +101,10 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Add state for storing location coordinates
+  const [startLocation, setStartLocation] = useState<Location | null>(null);
+  const [endLocation, setEndLocation] = useState<Location | null>(null);
 
   useEffect(() => {
     // If we have an initialRide, populate the form
@@ -35,8 +113,30 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
       setEndAddress(initialRide.endLocation.address);
       setDepartureTime(new Date(initialRide.startTime));
       setTotalSeats(initialRide.totalSeats);
+      setStartLocation(initialRide.startLocation);
+      setEndLocation(initialRide.endLocation);
     }
   }, [initialRide]);
+
+  const handleStartPlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.geometry?.location) {
+      setStartLocation({
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng(),
+        address: place.formatted_address || startAddress
+      });
+    }
+  };
+
+  const handleEndPlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.geometry?.location) {
+      setEndLocation({
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng(),
+        address: place.formatted_address || endAddress
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +145,17 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
     setSuccess(null);
     
     try {
-      const createLocation = (address: string): Location => ({
-        latitude: Math.random() * 180 - 90,  // Mock latitude
-        longitude: Math.random() * 360 - 180, // Mock longitude
-        address: address
-      });
+      const createLocation = (address: string, location?: Location | null): Location => {
+        if (location) {
+          return location;
+        }
+        // Fallback to mock coordinates if no real location is available
+        return {
+          latitude: Math.random() * 180 - 90,
+          longitude: Math.random() * 360 - 180,
+          address: address
+        };
+      };
 
       let savedRide: Ride;
       
@@ -57,13 +163,15 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
         // Update existing ride
         savedRide = {
           ...initialRide,
-          startLocation: createLocation(startAddress),
-          endLocation: createLocation(endAddress),
+          startLocation: createLocation(startAddress, startLocation),
+          endLocation: createLocation(endAddress, endLocation),
           startTime: departureTime?.toISOString() || new Date().toISOString(),
           totalSeats: totalSeats,
           availableSeats: totalSeats, // This might need logic to preserve existing bookings
           updatedAt: new Date().toISOString()
         };
+
+        console.log('Updating ride:', savedRide);
         
         await rideApi.updateRide(savedRide);
         setSuccess('Ride updated successfully!');
@@ -74,8 +182,8 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
         savedRide = {
           rideId: `ride_${uuidv4()}`,
           driverId: userProfile?.id || '',
-          startLocation: createLocation(startAddress),
-          endLocation: createLocation(endAddress),
+          startLocation: createLocation(startAddress, startLocation),
+          endLocation: createLocation(endAddress, endLocation),
           startTime: startDate.toISOString(),
           endTime: endDate.toISOString(),
           totalSeats: totalSeats,
@@ -108,23 +216,19 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
       
       <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-        <TextField
+        <AddressAutocomplete
           label="Starting Location"
           value={startAddress}
-          onChange={(e) => setStartAddress(e.target.value)}
-          fullWidth
-          required
-          margin="normal"
+          onChange={setStartAddress}
+          onPlaceSelect={handleStartPlaceSelect}
           placeholder="Enter your pickup location"
         />
         
-        <TextField
+        <AddressAutocomplete
           label="Destination"
           value={endAddress}
-          onChange={(e) => setEndAddress(e.target.value)}
-          fullWidth
-          required
-          margin="normal"
+          onChange={setEndAddress}
+          onPlaceSelect={handleEndPlaceSelect}
           placeholder="Enter your destination"
         />
         
@@ -169,6 +273,14 @@ const RideForm: React.FC<RideFormProps> = ({ initialRide, onSuccess }) => {
         </Button>
       </Box>
     </Paper>
+  );
+};
+
+const RideForm: React.FC<RideFormProps> = (props) => {
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <RideFormContent {...props} />
+    </APIProvider>
   );
 };
 

@@ -1,41 +1,44 @@
 export interface Location {
+    address?: string;
     latitude: number;
     longitude: number;
-    address: string;
   }
   
   export interface RiderDetail {
+    dropoffLocation?: Location;
+    entryPolyline?: string;
+    exitPolyline?: string;
+    pickupLocation?: Location;
     requestId: string;
     rideStatus: 'pending' | 'approved' | 'rejected';
-    pickupLocation?: Location;
-    dropoffLocation?: Location;
   }
   
   export interface Ride {
-    rideId: string;
+    availableSeats: number;
+    createdAt: string;
     driverId: string;
-    startLocation: Location;
     endLocation: Location;
-    startTime: string;
     endTime: string;
     daysOfWeek?: string[];
-    availableSeats: number;
-    totalSeats: number;
-    status: 'active' | 'cancelled' | 'completed';
+    rideId: string;
+    ridePolyline?: string;
     riders?: Record<string, RiderDetail>;
-    createdAt: string;
+    startLocation: Location;
+    startTime: string;
+    status: 'active' | 'cancelled' | 'completed';
+    totalSeats: number;
     updatedAt: string;
   }
   
   export interface RideRequest {
-    requestId: string;
+    createdAt: string;
     driverId: string;
+    dropoffLocation?: Location;
+    pickupLocation?: Location;
+    requestId: string;
     rideId: string;
     riderId: string;
     status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-    pickupLocation?: Location;
-    dropoffLocation?: Location;
-    createdAt: string;
     updatedAt?: string
   }
   
@@ -49,5 +52,14 @@ export interface Location {
     daysOfWeek: string[];
     createdAt: string;
     updatedAt: string;
-    ride_distances?: Array<{ ride_id: string, distance: number }>;
+    ride_distances?: Array<RideDistance>;
+  }
+
+  export interface RideDistance {
+    distance: number;
+    entry_point: Location;
+    entry_polyline: string;
+    exit_point: Location;
+    exit_polyline: string;
+    rideId: string;
   }
