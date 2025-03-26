@@ -106,6 +106,8 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   const [startLocation, setStartLocation] = useState<Location | null>(null);
   const [endLocation, setEndLocation] = useState<Location | null>(null);
 
+  const maxSeats = userProfile?.driver?.vehicles[0]?.capacity;
+
   useEffect(() => {
     // If we have an initialRide, populate the form
     if (initialRide) {
@@ -249,7 +251,7 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
             label="Available Seats"
             onChange={(e) => setTotalSeats(Number(e.target.value))}
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+            {Array.from({ length: maxSeats || 0 }, (_, i) => i + 1).map((num) => (
               <MenuItem key={num} value={num}>{num}</MenuItem>
             ))}
           </Select>
