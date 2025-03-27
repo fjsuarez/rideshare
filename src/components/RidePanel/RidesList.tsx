@@ -276,7 +276,7 @@ const RidesList: React.FC<RidesListProps> = ({
           value={maxDistance}
           onChange={(e) => {
             const value = parseInt(e.target.value);
-            if (!isNaN(value) && value >= 100 && value <= 2000) {
+            if (!isNaN(value) && value >= 100 && value <= 5000) {
               setMaxDistance(value);
             }
           }}
@@ -286,7 +286,7 @@ const RidesList: React.FC<RidesListProps> = ({
           }}
           inputProps={{
             min: 100,
-            max: 2000,
+            max: 5000,
             step: 100,
             type: 'number',
             'aria-labelledby': 'max-walking-distance-input',

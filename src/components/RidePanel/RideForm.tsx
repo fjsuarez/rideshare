@@ -111,11 +111,14 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   useEffect(() => {
     // If we have an initialRide, populate the form
     if (initialRide) {
+      console.log("Initial Ride: ", initialRide);
       if (initialRide.startLocation) {
         setStartLocation(initialRide.startLocation);
+        setStartAddress(initialRide.startLocation.address || 'Unknown Location');
       }
       if (initialRide.endLocation) {
         setEndLocation(initialRide.endLocation);
+        setEndAddress(initialRide.endLocation.address || 'Unknown Location');
       }
       setDepartureTime(new Date(initialRide.startTime));
       setTotalSeats(initialRide.totalSeats);
