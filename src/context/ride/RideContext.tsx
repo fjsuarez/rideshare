@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Ride, RideRequest } from '../../services/models/rideTypes';
+import { Ride, RideRequest, Commute } from '../../services/models/rideTypes';
 
 interface RideContextType {
   selectedRide: Ride | null;
   selectRide: (ride: Ride | null) => void;
   selectedRequest: RideRequest | null;
   selectRequest: (request: RideRequest | null) => void;
-  // Add more shared state as needed
+  userCommute: Commute | null;
+  setUserCommute: (commute: Commute | null) => void;
+  userRide: Ride | null;
+  setUserRide: (ride: Ride | null) => void;
 }
 
 const defaultContext: RideContextType = {
@@ -14,6 +17,10 @@ const defaultContext: RideContextType = {
   selectRide: () => {},
   selectedRequest: null,
   selectRequest: () => {},
+  userCommute: null,
+  setUserCommute: () => {},
+  userRide: null,
+  setUserRide: () => {},
 };
 
 const RideContext = createContext<RideContextType>(defaultContext);
@@ -27,6 +34,8 @@ interface RideProviderProps {
 export const RideProvider: React.FC<RideProviderProps> = ({ children }) => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<RideRequest | null>(null);
+  const [userCommute, setUserCommute] = useState<Commute | null>(null);
+  const [userRide, setUserRide] = useState<Ride | null>(null);
 
   const selectRide = (ride: Ride | null) => {
     console.log("Selecting ride", ride);
@@ -48,6 +57,10 @@ export const RideProvider: React.FC<RideProviderProps> = ({ children }) => {
         selectRide,
         selectedRequest,
         selectRequest,
+        userCommute,
+        setUserCommute,
+        userRide,
+        setUserRide
       }}
     >
       {children}

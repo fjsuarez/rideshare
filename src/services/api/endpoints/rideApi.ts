@@ -28,7 +28,7 @@ export const rideApi = {
 
   // Available rides
   async getAvailableRides(maxDistance: number = 5.0): Promise<Ride[]> {
-    const response = await apiClient.authenticatedRequest<Ride[]>('/rides/available/', {
+    const response = await apiClient.authenticatedRequest<Ride[]>('/rides/available', {
       method: 'GET',
       params: { max_distance: maxDistance }
     });

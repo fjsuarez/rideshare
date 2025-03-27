@@ -12,7 +12,7 @@ import {
   DialogActions,
   CircularProgress,
 } from "@mui/material";
-import LocationForm from "./LocationForm";
+import CommuteForm from "./CommuteForm";
 import RideForm from "./RideForm";
 import CommuteInfo from "./CommuteInfo";
 import RideInfo from "./RideInfo";
@@ -38,7 +38,8 @@ const RidePanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<"rider" | "driver" | null>(null);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
-  const { selectRide, selectRequest } = useRide();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { selectRide, userCommute } = useRide();
   
   useEffect(() => {
     if (userProfile) {
@@ -89,6 +90,9 @@ const RidePanel: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Message received. ", payload);
+
+      setRefreshTrigger(prev => prev + 1);
+
       const action = (snackbarId: string) => (
         <>
           <Button
@@ -122,7 +126,7 @@ const RidePanel: React.FC = () => {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [userProfile?.userType]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -137,19 +141,26 @@ const RidePanel: React.FC = () => {
     if (!selectedRide || !userProfile?.id) return;
 
     try {
+      const rideDistanceData = userCommute?.ride_distances?.find(
+        (rd) => rd.ride_id === selectedRide.rideId
+      );
+      rideDistanceData.entry_point.address = userCommute.startLocation.address;
+      rideDistanceData.exit_point.address = userCommute.endLocation.address;
+      
       const rideRequest: RideRequest = {
         driverId: selectedRide.driverId,
         requestId: `req_${uuidv4()}`,
         rideId: selectedRide.rideId,
         riderId: userProfile.id,
         status: "pending",
-        pickupLocation: selectedRide.startLocation,
-        dropoffLocation: selectedRide.endLocation,
+        pickupLocation: rideDistanceData?.entry_point,
+        dropoffLocation: rideDistanceData?.exit_point,
         createdAt: new Date().toISOString(),
       };
 
       await rideApi.requestRide(rideRequest);
       setOpenRequestDialog(false);
+      handleTabChange(null, 1);
     } catch (error) {
       console.error("Error requesting ride:", error);
     }
@@ -184,7 +195,7 @@ const RidePanel: React.FC = () => {
       {userRole === "rider" && (
         <Box sx={{ p: 2, borderBottom: "1px solid rgba(0, 0, 0, 0.12)" }}>
           {isEditMode ? (
-            <LocationForm
+            <CommuteForm
               initialCommute={commute}
               onSuccess={handleCommuteUpdated}
             />
@@ -241,23 +252,23 @@ const RidePanel: React.FC = () => {
             // Rider tab panels
             <>
               <TabPanel value={tabValue} index={0}>
-                <RidesList type="available" onSelectRide={handleRideSelect} />
+                <RidesList type="available" onSelectRide={handleRideSelect} refreshTrigger={refreshTrigger}/>
               </TabPanel>
               <TabPanel value={tabValue} index={1}>
-                <RidesList type="requests" />
+                <RidesList type="requests" refreshTrigger={refreshTrigger}/>
               </TabPanel>
               <TabPanel value={tabValue} index={2}>
-                <RidesList type="rider" />
+                <RidesList type="rider" refreshTrigger={refreshTrigger}/>
               </TabPanel>
             </>
           ) : (
             // Driver tab panels
             <>
               <TabPanel value={tabValue} index={0}>
-                <RidesList type="requests" filter="pending" />
+                <RidesList type="requests" filter="pending" refreshTrigger={refreshTrigger}/>
               </TabPanel>
               <TabPanel value={tabValue} index={1}>
-                <RidesList type="driver" />
+                <RidesList type="driver" refreshTrigger={refreshTrigger}/>
               </TabPanel>
             </>
           )}
@@ -288,7 +299,7 @@ const RidePanel: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenRequestDialog(false)}>Cancel</Button>
-          <Button onClick={handleRequestRide} variant="contained">
+          <Button onClick={handleRequestRide} variant="contained" sx={{ bgcolor: 'info.main', color: 'white' }}>
             Request Ride
           </Button>
         </DialogActions>

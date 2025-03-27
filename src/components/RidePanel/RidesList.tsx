@@ -2,18 +2,23 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Paper,
   List,
   ListItem,
   ListItemText,
   Button,
   CircularProgress,
-  Alert,
+  Tooltip,
   Chip,
   Divider,
+  TextField,
+  InputAdornment,
+  Slider,
+  Stack,
 } from "@mui/material";
+import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { rideApi } from "../../services/api/endpoints/rideApi";
-import { notificationApi } from '../../services/api/endpoints/notificationApi';
+import { notificationApi } from "../../services/api/endpoints/notificationApi";
 import { useAuth } from "../../context/auth";
 import { useRide } from "../../context/ride/RideContext";
 import { useTheme } from "@mui/material/styles";
@@ -23,24 +28,53 @@ interface RidesListProps {
   type: "available" | "driver" | "rider" | "requests";
   onSelectRide?: (ride: Ride) => void;
   filter?: "pending" | "accepted" | "rejected";
+  refreshTrigger?: number; // Add this prop to trigger refreshes
 }
 
 const RidesList: React.FC<RidesListProps> = ({
   type,
   onSelectRide,
   filter,
+  refreshTrigger = 0,
 }) => {
   const { userProfile } = useAuth();
-  const { selectedRide, selectRide, selectedRequest, selectRequest } =
-    useRide();
+  const {
+    selectedRide,
+    selectRide,
+    selectedRequest,
+    selectRequest,
+    userCommute,
+  } = useRide();
   const theme = useTheme();
   const [rides, setRides] = useState<Ride[]>([]);
   const [requests, setRequests] = useState<RideRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [maxDistance, setMaxDistance] = useState<number>(1000);
+
+  
 
   const isRideSelected = (ride: Ride) => selectedRide?.rideId === ride.rideId;
   const isRequestSelected = (request: RideRequest) =>
     selectedRequest?.requestId === request.requestId;
+
+  // Format distance for display
+  const formatDistance = (distance: number): string => {
+    if (distance < 1000) {
+      return `${Math.round(distance)}m`;
+    }
+    return `${(distance/1000).toFixed(1)}km`;
+  };
+
+  // Get ride distance from userCommute.rides_distances
+  const getRideDistance = (rideId: string) => {
+    if (!userCommute?.ride_distances) return null;
+
+    const distanceInfo = userCommute.ride_distances.find(
+      (d) => d.ride_id === rideId
+    );
+
+    return distanceInfo?.distance || null;
+  };
 
   const selectedItemStyle = {
     border: "2px solid",
@@ -58,7 +92,7 @@ const RidesList: React.FC<RidesListProps> = ({
       try {
         switch (type) {
           case "available":
-            const availableRides = await rideApi.getAvailableRides();
+            const availableRides = await rideApi.getAvailableRides(maxDistance/1000);
             setRides(availableRides);
             break;
 
@@ -106,12 +140,15 @@ const RidesList: React.FC<RidesListProps> = ({
     };
 
     fetchData();
-  }, [type, userProfile?.id, filter, userProfile?.userType]);
+  }, [type, userProfile?.id, filter, userProfile?.userType, refreshTrigger, maxDistance]);
 
-  const handleApproveRequest = async (requestId: string, request: RideRequest) => {
+  const handleApproveRequest = async (
+    requestId: string,
+    request: RideRequest
+  ) => {
     try {
       await rideApi.approveRideRequest(requestId);
-      
+
       // Send notification to the rider
       await notificationApi.sendNotification({
         userId: request.riderId,
@@ -120,8 +157,8 @@ const RidesList: React.FC<RidesListProps> = ({
         data: {
           type: "request_update",
           requestId: requestId,
-          status: "accepted"
-        }
+          status: "accepted",
+        },
       });
 
       // Refresh the list after approval
@@ -138,10 +175,13 @@ const RidesList: React.FC<RidesListProps> = ({
     }
   };
 
-  const handleRejectRequest = async (requestId: string, request: RideRequest) => {
+  const handleRejectRequest = async (
+    requestId: string,
+    request: RideRequest
+  ) => {
     try {
       await rideApi.rejectRideRequest(requestId);
-      
+
       // Send notification to the rider
       await notificationApi.sendNotification({
         userId: request.riderId,
@@ -150,8 +190,8 @@ const RidesList: React.FC<RidesListProps> = ({
         data: {
           type: "request_update",
           requestId: requestId,
-          status: "rejected"
-        }
+          status: "rejected",
+        },
       });
       // Refresh the list after rejection
       if (userProfile?.id) {
@@ -192,6 +232,82 @@ const RidesList: React.FC<RidesListProps> = ({
     return <Chip label={status.toUpperCase()} color={color} size="small" />;
   };
 
+  const TruncatedAddress = ({ label, address }: { label: string, address: string }) => (
+    <Tooltip title={address} placement="top">
+      <Typography
+        component="span"
+        variant="body2"
+        display="block"
+        noWrap
+        sx={{ maxWidth: '230px' }}
+      >
+        {label}: {address}
+      </Typography>
+    </Tooltip>
+  );
+
+  const DistanceFilter = () => (
+    <Box 
+      sx={{
+        p: 2,
+        backgroundColor: 'background.paper',
+        borderRadius: 1,
+        mb: 2,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}
+    >
+      <Typography variant="subtitle1" gutterBottom fontWeight="medium">
+        <FilterAltIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 1 }} />
+        Maximum Walking Distance
+      </Typography>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Slider
+          value={maxDistance}
+          onChange={(_, newValue) => setMaxDistance(newValue as number)}
+          min={100}
+          max={5000}
+          step={100}
+          aria-labelledby="max-walking-distance-slider"
+          sx={{ flexGrow: 1 }}
+          valueLabelDisplay="auto"
+          valueLabelFormat={(value) => `${value < 1000 ? value : (value/1000).toFixed(1)}${value < 1000 ? 'm' : 'km'}`}
+        />
+        <TextField
+          value={maxDistance}
+          onChange={(e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value) && value >= 100 && value <= 2000) {
+              setMaxDistance(value);
+            }
+          }}
+          size="small"
+          InputProps={{
+            endAdornment: <InputAdornment position="end">m</InputAdornment>,
+          }}
+          inputProps={{
+            min: 100,
+            max: 2000,
+            step: 100,
+            type: 'number',
+            'aria-labelledby': 'max-walking-distance-input',
+          }}
+          sx={{ 
+            width: '150px', // Increased from 120px
+            '& .MuiOutlinedInput-root': {
+              paddingRight: '8px' // Ensure there's enough space for the input
+            },
+            '& input': {
+              paddingRight: '2px' // Reduce padding inside input to give more space for numbers
+            }
+          }}
+        />
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+        Shows rides with walking distances less than {maxDistance < 1000 ? maxDistance + 'm' : (maxDistance/1000).toFixed(1) + 'km'}
+      </Typography>
+    </Box>
+  );
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
@@ -228,7 +344,9 @@ const RidesList: React.FC<RidesListProps> = ({
                       variant="contained"
                       color="primary"
                       size="small"
-                      onClick={() => handleApproveRequest(request.requestId, request)}
+                      onClick={() =>
+                        handleApproveRequest(request.requestId, request)
+                      }
                       sx={{
                         mr: 1,
                         bgcolor: `${theme.palette.accent.main}`,
@@ -244,7 +362,9 @@ const RidesList: React.FC<RidesListProps> = ({
                       variant="outlined"
                       color="error"
                       size="small"
-                      onClick={() => handleRejectRequest(request.requestId, request)}
+                      onClick={() =>
+                        handleRejectRequest(request.requestId, request)
+                      }
                     >
                       Reject
                     </Button>
@@ -259,20 +379,12 @@ const RidesList: React.FC<RidesListProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    <Typography variant="subtitle1">
-                      From: {request.pickupLocation.address}
-                    </Typography>
+                <TruncatedAddress label="From" address={request.pickupLocation.address} />
                   </Box>
                 }
                 secondary={
                   <>
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      display="block"
-                    >
-                      To: {request.dropoffLocation.address}
-                    </Typography>
+                    <TruncatedAddress label="To" address={request.dropoffLocation.address} />
                     <Typography
                       component="span"
                       variant="body2"
@@ -291,69 +403,97 @@ const RidesList: React.FC<RidesListProps> = ({
       </List>
     );
   }
-
   // Regular rides list (available, driver, rider)
-  if (rides.length === 0) {
-    return (
-      <Typography variant="body1" sx={{ p: 2 }}>
-        No rides found.
-      </Typography>
-    );
-  }
-
   return (
     <>
-      <List>
-        {rides.map((ride) => (
-          <React.Fragment key={ride.rideId}>
-            <ListItem
-              alignItems="flex-start"
-              onClick={() => {
-                selectRide(ride);
-              }}
-              sx={{
-                cursor: "pointer",
-                ...(isRideSelected(ride) ? selectedItemStyle : {}),
-              }}
-            >
-              <ListItemText
-                primary={
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography variant="subtitle1">
-                      From: {ride.startLocation.address}
-                    </Typography>
-                    <Typography variant="body2">
-                      {new Date(ride.startTime).toLocaleString()}
-                    </Typography>
-                  </Box>
-                }
-                secondary={
-                  <>
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      display="block"
+      {/* Show distance filter only for available rides */}
+      {type === "available" && <DistanceFilter />}
+
+      {rides.length === 0 ? (
+        <Typography variant="body1" sx={{ p: 2 }}>
+          No rides found. {type === "available" && "Try increasing the maximum walking distance."}
+        </Typography>
+      ) : (
+        <List>
+          {rides.map((ride) => {
+          // Get pre-calculated distance data for this ride
+          const distanceData = getRideDistance(ride.rideId);
+          
+          return (
+            <React.Fragment key={ride.rideId}>
+              <ListItem
+                alignItems="flex-start"
+                onClick={() => {
+                  selectRide(ride);
+                }}
+                sx={{
+                  cursor: "pointer",
+                  ...(isRideSelected(ride) ? selectedItemStyle : {}),
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
                     >
-                      To: {ride.endLocation.address}
-                    </Typography>
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      display="block"
-                      sx={{ mt: 1 }}
-                    >
-                      Available Seats: {ride.availableSeats}/{ride.totalSeats}
-                    </Typography>
-                  </>
-                }
-              />
-            </ListItem>
-            <Divider component="li" />
-          </React.Fragment>
-        ))}
+                      <Typography variant="subtitle1">
+                        From: {ride.startLocation.address}
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(ride.startTime).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  }
+                  secondary={
+                    <>
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        display="block"
+                      >
+                        To: {ride.endLocation.address}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        display="block"
+                        sx={{ mt: 1 }}
+                      >
+                        Available Seats: {ride.availableSeats}/{ride.totalSeats}
+                      </Typography>
+
+                      {/* Display walking distances if available */}
+                      {userCommute && userProfile?.userType === 'rider' && distanceData && (
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            mt: 1, 
+                            color: 'text.secondary',
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <Tooltip title="Walking distance from your home to pickup">
+                            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                              <DirectionsWalkIcon fontSize="small" sx={{ mr: 0.5, color: theme.palette.info.main }} />
+                              <Typography variant="body2" component="span">
+                                Walking Distance: {formatDistance(distanceData)}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </>
+                  }
+                  slotProps={{ secondary: { component: "div" } }}
+                />
+              </ListItem>
+              <Divider component="li" />
+            </React.Fragment>
+          );
+        })}
       </List>
+      )}
 
       {type === "available" && (
         <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -383,4 +523,5 @@ const RidesList: React.FC<RidesListProps> = ({
     </>
   );
 };
+
 export default RidesList;

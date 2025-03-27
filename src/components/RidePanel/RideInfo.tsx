@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Card, CardContent, Typography, Box, IconButton,
   Stack
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { Ride } from '../../services/models/rideTypes';
+import { useRide } from '../../context/ride/RideContext';
 import { format } from 'date-fns';
 
 interface RideInfoProps {
@@ -13,6 +14,12 @@ interface RideInfoProps {
 }
 
 const RideInfo: React.FC<RideInfoProps> = ({ ride, onEdit }) => {
+    const { setUserRide } = useRide();
+    useEffect(() => {
+      setUserRide(ride);
+      console.log(ride);
+      return () => setUserRide(null);
+    }, [ride, setUserRide]);
   return (
     <Card variant="outlined">
       <CardContent>

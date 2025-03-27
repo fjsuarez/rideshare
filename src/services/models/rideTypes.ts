@@ -61,5 +61,5 @@ export interface Location {
     entry_polyline: string;
     exit_point: Location;
     exit_polyline: string;
-    rideId: string;
+    ride_id: string;
   }

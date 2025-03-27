@@ -103,7 +103,7 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   
   // Add state for storing location coordinates
-  const [startLocation, setStartLocation] = useState<Location | null>(null);
+  const [startLocation, setStartLocation] = useState<Location>(null);
   const [endLocation, setEndLocation] = useState<Location | null>(null);
 
   const maxSeats = userProfile?.driver?.vehicles[0]?.capacity;

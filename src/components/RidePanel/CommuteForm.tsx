@@ -12,7 +12,7 @@ import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-interface LocationFormProps {
+interface CommuteFormProps {
   initialCommute?: Commute | null;
   onSuccess: (commute: Commute) => void;
 }
@@ -88,7 +88,7 @@ const AddressAutocomplete = ({
   );
 };
 
-const LocationFormContent = ({ initialCommute, onSuccess }: LocationFormProps) => {
+const CommuteFormContent = ({ initialCommute, onSuccess }: CommuteFormProps) => {
   const theme = useTheme();
   const { userProfile } = useAuth();
   const [homeAddress, setHomeAddress] = useState('');
@@ -232,12 +232,12 @@ const LocationFormContent = ({ initialCommute, onSuccess }: LocationFormProps) =
   );
 };
 
-const LocationForm: React.FC<LocationFormProps> = (props) => {
+const CommuteForm: React.FC<CommuteFormProps> = (props) => {
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-      <LocationFormContent {...props} />
+      <CommuteFormContent {...props} />
     </APIProvider>
   );
 };
 
-export default LocationForm;
+export default CommuteForm;

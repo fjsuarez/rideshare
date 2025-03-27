@@ -14,7 +14,7 @@ import { Box, Typography, useTheme } from "@mui/material";
 import polyline from "@mapbox/polyline";
 
 const MapPanel: React.FC = () => {
-  const { selectedRide, selectedRequest } = useRide();
+  const { selectedRide, selectedRequest, userCommute, userRide } = useRide();
   const theme = useTheme();
 
   // Create custom styled icons using the app's theme colors
@@ -52,6 +52,43 @@ const MapPanel: React.FC = () => {
         iconAnchor: [11, 11],
       }),
     [theme.palette.primary.main]
+  );
+  // Add home location icon
+  const homeIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: "custom-map-marker",
+        html: `<div style="
+      background-color: ${theme.palette.info.dark};
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 3px rgba(0,0,0,0.3);
+    "></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      }),
+    [theme.palette.info.dark]
+  );
+
+  // Add work location icon
+  const workIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: "custom-map-marker",
+        html: `<div style="
+      background-color: ${theme.palette.warning.dark};
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 3px rgba(0,0,0,0.3);
+    "></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      }),
+    [theme.palette.warning.dark]
   );
 
   // Create icons for pickup and dropoff locations
@@ -187,8 +224,17 @@ const MapPanel: React.FC = () => {
 
   // Calculate route points and create path
   const routePoints = useMemo(() => {
+    if (selectedRequest && userCommute) {
+      return []; // Return empty array to prevent line drawing
+    }
+
     if (selectedRide?.ridePolyline) {
       return polyline.decode(selectedRide.ridePolyline);
+    }
+
+    // If viewing a request and user is a driver with a ride, use the driver's ride polyline
+    if (selectedRequest && userRide?.ridePolyline) {
+      return polyline.decode(userRide.ridePolyline);
     }
 
     const points: [number, number][] = [];
@@ -216,6 +262,56 @@ const MapPanel: React.FC = () => {
     return points;
   }, [startLocation, endLocation, riderLocations, selectedRide?.ridePolyline]);
 
+  const commutePolylines = useMemo(() => {
+    if (!userCommute?.ride_distances || !selectedRide) return null;
+
+    // Find the matching ride distance entry
+    const rideDistance = userCommute.ride_distances.find(
+      (rd) => rd.ride_id === selectedRide.rideId
+    );
+
+    if (!rideDistance) return null;
+
+    return {
+      // Polyline from home to pickup
+      entryRoute: rideDistance.entry_polyline
+        ? polyline.decode(rideDistance.entry_polyline)
+        : [],
+
+      // Polyline from dropoff to work
+      exitRoute: rideDistance.exit_polyline
+        ? polyline.decode(rideDistance.exit_polyline)
+        : [],
+    };
+  }, [userCommute, selectedRide]);
+
+  const homeLocation = useMemo(() => {
+    if (userCommute?.startLocation) {
+      return {
+        position: [
+          userCommute.startLocation.latitude,
+          userCommute.startLocation.longitude,
+        ] as [number, number],
+        address: userCommute.startLocation.address,
+      };
+    }
+    return null;
+  }, [userCommute]);
+
+  // Extract work location from userCommute
+  const workLocation = useMemo(() => {
+    if (userCommute?.endLocation) {
+      return {
+        position: [
+          userCommute.endLocation.latitude,
+          userCommute.endLocation.longitude,
+        ] as [number, number],
+        address: userCommute.endLocation.address,
+      };
+    }
+    return null;
+  }, [userCommute]);
+
   // Calculate map bounds including all points
   const bounds = useMemo(() => {
     const allPoints: [number, number][] = [];
@@ -228,11 +324,15 @@ const MapPanel: React.FC = () => {
       allPoints.push(loc.position);
     });
 
+    // Add home and work locations if available
+    if (homeLocation) allPoints.push(homeLocation.position);
+    if (workLocation) allPoints.push(workLocation.position);
+
     if (allPoints.length > 0) {
       return L.latLngBounds(allPoints);
     }
     return undefined;
-  }, [startLocation, endLocation, riderLocations]);
+  }, [startLocation, endLocation, riderLocations, homeLocation, workLocation]);
 
   // MapViewAdjuster component
   const MapViewAdjuster = ({ bounds }: { bounds?: L.LatLngBounds }) => {
@@ -297,13 +397,45 @@ const MapPanel: React.FC = () => {
           <Polyline
             positions={routePoints}
             color={
-              selectedRide?.ridePolyline
+              selectedRide?.ridePolyline ||
+              (selectedRequest && userRide?.ridePolyline)
                 ? theme.palette.primary.main
                 : theme.palette.info.main
             }
-            weight={selectedRide?.ridePolyline ? 4 : 3}
+            weight={
+              selectedRide?.ridePolyline ||
+              (selectedRequest && userRide?.ridePolyline)
+                ? 4
+                : 3
+            }
             opacity={0.8}
-            dashArray={selectedRide?.ridePolyline ? undefined : "5, 8"}
+            dashArray={
+              selectedRide?.ridePolyline ||
+              (selectedRequest && userRide?.ridePolyline)
+                ? undefined
+                : "5, 8"
+            }
+          />
+        )}
+        {/* Draw home to pickup walking route */}
+        {commutePolylines?.entryRoute.length > 1 && (
+          <Polyline
+            positions={commutePolylines?.entryRoute}
+            color={theme.palette.info.dark}
+            weight={3}
+            opacity={0.7}
+            dashArray="5, 8"
+          />
+        )}
+
+        {/* Draw dropoff to work walking route */}
+        {commutePolylines?.exitRoute.length > 1 && (
+          <Polyline
+            positions={commutePolylines?.exitRoute}
+            color={theme.palette.warning.dark}
+            weight={3}
+            opacity={0.7}
+            dashArray="5, 8"
           />
         )}
 
@@ -317,7 +449,7 @@ const MapPanel: React.FC = () => {
                   fontWeight="bold"
                   color="accent.main"
                 >
-                  Start Location
+                   {selectedRequest ? "Pickup Location" : "Start Location"}
                 </Typography>
                 <Typography variant="body2">{startLocation.address}</Typography>
                 <Typography
@@ -396,7 +528,7 @@ const MapPanel: React.FC = () => {
                   fontWeight="bold"
                   color="primary.main"
                 >
-                  Destination
+                  {selectedRequest ? "Dropoff Location" : "Destination"}
                 </Typography>
                 <Typography variant="body2">{endLocation.address}</Typography>
                 <Typography
@@ -406,6 +538,41 @@ const MapPanel: React.FC = () => {
                 >
                   Arrival: {endLocation.time}
                 </Typography>
+              </Box>
+            </Popup>
+          </Marker>
+        )}
+        {/* Add home location marker */}
+        {homeLocation && (
+          <Marker position={homeLocation.position} icon={homeIcon}>
+            <Popup className="custom-popup">
+              <Box sx={{ p: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="info.dark"
+                >
+                  Your Home
+                </Typography>
+                <Typography variant="body2">{homeLocation.address}</Typography>
+              </Box>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Add work location marker */}
+        {workLocation && (
+          <Marker position={workLocation.position} icon={workIcon}>
+            <Popup className="custom-popup">
+              <Box sx={{ p: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="warning.dark"
+                >
+                  Your Workplace
+                </Typography>
+                <Typography variant="body2">{workLocation.address}</Typography>
               </Box>
             </Popup>
           </Marker>

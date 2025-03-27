@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Card, CardContent, Typography, Box, IconButton,
   Chip, Stack
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { Commute } from '../../services/models/rideTypes';
+import { useRide } from '../../context/ride/RideContext';
 
 interface CommuteInfoProps {
   commute: Commute;
@@ -12,6 +13,12 @@ interface CommuteInfoProps {
 }
 
 const CommuteInfo: React.FC<CommuteInfoProps> = ({ commute, onEdit }) => {
+  const { setUserCommute } = useRide();
+  useEffect(() => {
+    setUserCommute(commute);
+    console.log(commute);
+    return () => setUserCommute(null);
+  }, [commute, setUserCommute]);
   return (
     <Card variant="outlined">
       <CardContent>
