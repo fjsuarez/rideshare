@@ -103,7 +103,7 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   const [success, setSuccess] = useState<string | null>(null);
   
   // Add state for storing location coordinates
-  const [startLocation, setStartLocation] = useState<Location>(null);
+  const [startLocation, setStartLocation] = useState<Location | null>(null);
   const [endLocation, setEndLocation] = useState<Location | null>(null);
 
   const maxSeats = userProfile?.driver?.vehicles[0]?.capacity;
@@ -111,8 +111,12 @@ const RideFormContent = ({ initialRide, onSuccess }: RideFormProps) => {
   useEffect(() => {
     // If we have an initialRide, populate the form
     if (initialRide) {
-      setStartAddress(initialRide.startLocation.address);
-      setEndAddress(initialRide.endLocation.address);
+      if (initialRide.startLocation) {
+        setStartLocation(initialRide.startLocation);
+      }
+      if (initialRide.endLocation) {
+        setEndLocation(initialRide.endLocation);
+      }
       setDepartureTime(new Date(initialRide.startTime));
       setTotalSeats(initialRide.totalSeats);
       setStartLocation(initialRide.startLocation);

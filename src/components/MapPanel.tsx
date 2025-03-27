@@ -150,7 +150,7 @@ const MapPanel: React.FC = () => {
             riderDetail.pickupLocation.latitude,
             riderDetail.pickupLocation.longitude,
           ] as [number, number],
-          address: riderDetail.pickupLocation.address,
+          address: riderDetail.pickupLocation.address || "Unknown location",
           riderId,
         });
       }
@@ -162,7 +162,7 @@ const MapPanel: React.FC = () => {
             riderDetail.dropoffLocation.latitude,
             riderDetail.dropoffLocation.longitude,
           ] as [number, number],
-          address: riderDetail.dropoffLocation.address,
+          address: riderDetail.dropoffLocation.address || "Unknown location",
           riderId,
         });
       }
@@ -418,26 +418,30 @@ const MapPanel: React.FC = () => {
           />
         )}
         {/* Draw home to pickup walking route */}
-        {commutePolylines?.entryRoute.length > 1 && (
-          <Polyline
-            positions={commutePolylines?.entryRoute}
-            color={theme.palette.info.dark}
-            weight={3}
-            opacity={0.7}
-            dashArray="5, 8"
-          />
-        )}
+        {commutePolylines &&
+          commutePolylines.entryRoute &&
+          commutePolylines.entryRoute.length > 1 && (
+            <Polyline
+              positions={commutePolylines.entryRoute as L.LatLngExpression[]}
+              color={theme.palette.info.dark}
+              weight={3}
+              opacity={0.7}
+              dashArray="5, 8"
+            />
+          )}
 
         {/* Draw dropoff to work walking route */}
-        {commutePolylines?.exitRoute.length > 1 && (
-          <Polyline
-            positions={commutePolylines?.exitRoute}
-            color={theme.palette.warning.dark}
-            weight={3}
-            opacity={0.7}
-            dashArray="5, 8"
-          />
-        )}
+        {commutePolylines &&
+          commutePolylines.exitRoute &&
+          commutePolylines.exitRoute.length > 1 && (
+            <Polyline
+              positions={commutePolylines.exitRoute as L.LatLngExpression[]}
+              color={theme.palette.warning.dark}
+              weight={3}
+              opacity={0.7}
+              dashArray="5, 8"
+            />
+          )}
 
         {/* Start location marker */}
         {startLocation && (
@@ -449,7 +453,7 @@ const MapPanel: React.FC = () => {
                   fontWeight="bold"
                   color="accent.main"
                 >
-                   {selectedRequest ? "Pickup Location" : "Start Location"}
+                  {selectedRequest ? "Pickup Location" : "Start Location"}
                 </Typography>
                 <Typography variant="body2">{startLocation.address}</Typography>
                 <Typography

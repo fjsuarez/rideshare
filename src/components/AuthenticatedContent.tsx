@@ -1,11 +1,10 @@
 import Grid from "@mui/material/Grid2";
-import Button from "@mui/material/Button";
 import ProfilePanel from "./ProfilePanel/ProfilePanel";
 import RidePanel from "./RidePanel";
 import MapPanel from "./MapPanel";
 import ListDrawer from "./ListDrawer";
 
-import { SnackbarProvider, enqueueSnackbar, closeSnackbar } from "notistack";
+import { SnackbarProvider, enqueueSnackbar } from "notistack";
 import { useEffect } from "react";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../firebase";
@@ -27,7 +26,12 @@ function AuthenticatedContent({ isSmallScreen }: AuthenticatedContentProps) {
       const token = await getToken(messaging, {
         vapidKey: VITE_APP_VAPID_KEY,
       });
-      notificationApi.registerToken(userProfile?.id, token);
+      if (userProfile?.id) {
+        notificationApi.registerToken(userProfile.id, token);
+        console.log("Token generated : ", token);
+      } else {
+        console.warn("Cannot register notification token: user ID is undefined");
+      }
 
       console.log("Token generated : ", token);
     } else if (permission === "denied") {

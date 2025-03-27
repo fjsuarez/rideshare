@@ -104,10 +104,10 @@ const CommuteFormContent = ({ initialCommute, onSuccess }: CommuteFormProps) => 
   useEffect(() => {
     // If we have an initialCommute, populate the form
     if (initialCommute) {
-      setHomeAddress(initialCommute.startLocation.address);
-      setWorkAddress(initialCommute.endLocation.address);
-      setHomeLocation(initialCommute.startLocation);
-      setWorkLocation(initialCommute.endLocation);
+      setHomeAddress(initialCommute.startLocation?.address || 'Unknown location');
+      setWorkAddress(initialCommute.endLocation?.address || 'Unknown location');
+      setHomeLocation(initialCommute.startLocation || null);
+      setWorkLocation(initialCommute.endLocation || null);
     }
   }, [initialCommute]);
 

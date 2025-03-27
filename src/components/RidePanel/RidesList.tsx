@@ -153,7 +153,7 @@ const RidesList: React.FC<RidesListProps> = ({
       await notificationApi.sendNotification({
         userId: request.riderId,
         title: "Ride Request Approved",
-        body: `Your ride request from ${request.pickupLocation.address} has been approved!`,
+        body: `Your ride request from ${request.pickupLocation?.address} has been approved!`,
         data: {
           type: "request_update",
           requestId: requestId,
@@ -186,7 +186,7 @@ const RidesList: React.FC<RidesListProps> = ({
       await notificationApi.sendNotification({
         userId: request.riderId,
         title: "Ride Request Rejected",
-        body: `Your ride request from ${request.pickupLocation.address} has been rejected.`,
+        body: `Your ride request from ${request.pickupLocation?.address} has been rejected.`,
         data: {
           type: "request_update",
           requestId: requestId,
@@ -232,8 +232,8 @@ const RidesList: React.FC<RidesListProps> = ({
     return <Chip label={status.toUpperCase()} color={color} size="small" />;
   };
 
-  const TruncatedAddress = ({ label, address }: { label: string, address: string }) => (
-    <Tooltip title={address} placement="top">
+  const TruncatedAddress = ({ label, address }: { label: string, address?: string }) => (
+    <Tooltip title={address || "Unknown address"} placement="top">
       <Typography
         component="span"
         variant="body2"
@@ -241,7 +241,7 @@ const RidesList: React.FC<RidesListProps> = ({
         noWrap
         sx={{ maxWidth: '230px' }}
       >
-        {label}: {address}
+        {label}: {address || "Unknown address"}
       </Typography>
     </Tooltip>
   );
@@ -292,12 +292,12 @@ const RidesList: React.FC<RidesListProps> = ({
             'aria-labelledby': 'max-walking-distance-input',
           }}
           sx={{ 
-            width: '150px', // Increased from 120px
+            width: '150px',
             '& .MuiOutlinedInput-root': {
-              paddingRight: '8px' // Ensure there's enough space for the input
+              paddingRight: '8px'
             },
             '& input': {
-              paddingRight: '2px' // Reduce padding inside input to give more space for numbers
+              paddingRight: '2px'
             }
           }}
         />
@@ -379,12 +379,12 @@ const RidesList: React.FC<RidesListProps> = ({
                   <Box
                     sx={{ display: "flex", justifyContent: "space-between" }}
                   >
-                <TruncatedAddress label="From" address={request.pickupLocation.address} />
+                <TruncatedAddress label="From" address={request.pickupLocation?.address} />
                   </Box>
                 }
                 secondary={
                   <>
-                    <TruncatedAddress label="To" address={request.dropoffLocation.address} />
+                    <TruncatedAddress label="To" address={request.dropoffLocation?.address} />
                     <Typography
                       component="span"
                       variant="body2"

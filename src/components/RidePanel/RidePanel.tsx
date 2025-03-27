@@ -23,7 +23,7 @@ import { rideApi } from "../../services/api/endpoints/rideApi";
 import { Ride, RideRequest, Commute } from "../../services/models/rideTypes";
 import { v4 as uuidv4 } from "uuid";
 import TabPanel from "./TabPanel";
-import { useSnackbar } from "notistack";
+import { useSnackbar, SnackbarKey } from "notistack";
 import { messaging } from "../../firebase";
 import { onMessage } from "firebase/messaging";
 
@@ -40,7 +40,7 @@ const RidePanel: React.FC = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { selectRide, userCommute } = useRide();
-  
+
   useEffect(() => {
     if (userProfile) {
       setUserRole(userProfile.userType);
@@ -91,20 +91,25 @@ const RidePanel: React.FC = () => {
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("Message received. ", payload);
 
-      setRefreshTrigger(prev => prev + 1);
+      setRefreshTrigger((prev) => prev + 1);
 
-      const action = (snackbarId: string) => (
+      const action = (snackbarId: SnackbarKey) => (
         <>
           <Button
             sx={{ color: "accent.contrastText" }}
             onClick={() => {
-              console.log("userRole is", userProfile?.userType)
+              console.log("userRole is", userProfile?.userType);
               const tab = userProfile?.userType === "rider" ? 1 : 0;
               console.log("Opening tab", tab);
               handleTabChange(null, tab);
-              rideApi.getRideById(payload.data.rideId).then((ride) => {
-                selectRide(ride);
-              });
+              if (payload.data?.rideId) {
+                rideApi.getRideById(payload.data.rideId).then((ride) => {
+                  selectRide(ride);
+                });
+              } else {
+                console.warn("No ride ID in notification payload");
+              }
+              
               closeSnackbar(snackbarId);
             }}
           >
@@ -120,15 +125,18 @@ const RidePanel: React.FC = () => {
           </Button>
         </>
       );
-      enqueueSnackbar(payload.notification.body, { action });
+      enqueueSnackbar(payload?.notification?.body, { action });
     });
-  
+
     return () => {
       unsubscribe();
     };
   }, [userProfile?.userType]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (
+    _event: React.SyntheticEvent | null,
+    newValue: number
+  ) => {
     setTabValue(newValue);
   };
 
@@ -144,9 +152,19 @@ const RidePanel: React.FC = () => {
       const rideDistanceData = userCommute?.ride_distances?.find(
         (rd) => rd.ride_id === selectedRide.rideId
       );
-      rideDistanceData.entry_point.address = userCommute.startLocation.address;
-      rideDistanceData.exit_point.address = userCommute.endLocation.address;
+      if (!rideDistanceData) {
+        console.error("Could not find matching ride distance data");
+        return;
+      }
       
+      if (userCommute?.startLocation?.address) {
+        rideDistanceData.entry_point.address = userCommute.startLocation.address;
+      }
+      
+      if (userCommute?.endLocation?.address) {
+        rideDistanceData.exit_point.address = userCommute.endLocation.address;
+      }
+
       const rideRequest: RideRequest = {
         driverId: selectedRide.driverId,
         requestId: `req_${uuidv4()}`,
@@ -252,23 +270,31 @@ const RidePanel: React.FC = () => {
             // Rider tab panels
             <>
               <TabPanel value={tabValue} index={0}>
-                <RidesList type="available" onSelectRide={handleRideSelect} refreshTrigger={refreshTrigger}/>
+                <RidesList
+                  type="available"
+                  onSelectRide={handleRideSelect}
+                  refreshTrigger={refreshTrigger}
+                />
               </TabPanel>
               <TabPanel value={tabValue} index={1}>
-                <RidesList type="requests" refreshTrigger={refreshTrigger}/>
+                <RidesList type="requests" refreshTrigger={refreshTrigger} />
               </TabPanel>
               <TabPanel value={tabValue} index={2}>
-                <RidesList type="rider" refreshTrigger={refreshTrigger}/>
+                <RidesList type="rider" refreshTrigger={refreshTrigger} />
               </TabPanel>
             </>
           ) : (
             // Driver tab panels
             <>
               <TabPanel value={tabValue} index={0}>
-                <RidesList type="requests" filter="pending" refreshTrigger={refreshTrigger}/>
+                <RidesList
+                  type="requests"
+                  filter="pending"
+                  refreshTrigger={refreshTrigger}
+                />
               </TabPanel>
               <TabPanel value={tabValue} index={1}>
-                <RidesList type="driver" refreshTrigger={refreshTrigger}/>
+                <RidesList type="driver" refreshTrigger={refreshTrigger} />
               </TabPanel>
             </>
           )}
@@ -299,7 +325,11 @@ const RidePanel: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenRequestDialog(false)}>Cancel</Button>
-          <Button onClick={handleRequestRide} variant="contained" sx={{ bgcolor: 'info.main', color: 'white' }}>
+          <Button
+            onClick={handleRequestRide}
+            variant="contained"
+            sx={{ bgcolor: "info.main", color: "white" }}
+          >
             Request Ride
           </Button>
         </DialogActions>
